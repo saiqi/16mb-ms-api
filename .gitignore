@@ -1,0 +1,4 @@
+docker-compose.yml
+.idea/
+__pycache__/
+notebooks/
