@@ -6,8 +6,7 @@ RUN apt-get update ; \
 
 ADD ./requirements.txt /tmp/requirements.txt
 
-RUN pip3 install -r /tmp/requirements.txt ; \
-    pip3 install gunicorn
+RUN pip3 install -r /tmp/requirements.txt
 
 RUN mkdir /service 
 

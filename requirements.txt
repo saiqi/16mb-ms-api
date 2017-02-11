@@ -8,6 +8,7 @@ eventlet==0.20.1
 Flask==0.12
 Flask-RESTful==0.3.5
 greenlet==0.4.12
+gunicorn==19.6.0
 itsdangerous==0.24
 Jinja2==2.9.5
 kombu==3.0.37
