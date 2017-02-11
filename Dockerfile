@@ -4,7 +4,10 @@ RUN apt-get update ; \
 	apt-get install -y python3 python3-pip ; \
 	pip3 install pip --upgrade ;
 
-RUN pip3 install nameko flask_restful gunicorn
+ADD ./requirements.txt /tmp/requirements.txt
+
+RUN pip3 install -r /tmp/requirements.txt ; \
+    pip3 install gunicorn
 
 RUN mkdir /service 
 
