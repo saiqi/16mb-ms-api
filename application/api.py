@@ -30,7 +30,21 @@ class TwitterAddUserCommand(Resource):
         return 'Adding user {user} to referential'.format(user=args['user_id']), 201
 
 
+class RssAddFeedCommand(Resource):
+
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('feed_url')
+
+        args = parser.parse_args()
+
+        with ClusterRpcProxy(CONFIG) as rpc:
+            rpc.rss_collector.add_feed.async(args['feed_url'])
+
+        return 'Adding feed {feed} to referential'.format(feed=args['feed_url']), 201
+
 api.add_resource(TwitterAddUserCommand, '/api/v1/twitter/command/add_user')
+api.add_resource(RssAddFeedCommand, '/api/v1/rss/command/add_feed')
 
 if __name__ == '__main__':
     app.run()
