@@ -2,3 +2,5 @@ docker-compose.yml
 .idea/
 __pycache__/
 notebooks/
+core.*
+venv/
