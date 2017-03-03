@@ -38,7 +38,7 @@ class ApiService(object):
         return 'Opta F1 for season {} and competition {} inserted'.format(season_id, competition_id)
 
     @http('POST', '/api/v1/command/opta/update_all_f9')
-    def opta_add_f1(self, request):
+    def opta_update_all_f9(self, request):
         data = json.loads(request.get_data(as_text=True))
         season_id = data['season_id']
         competition_id = data['competition_id']
