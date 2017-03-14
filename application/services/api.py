@@ -1,7 +1,34 @@
 import json
 
-from nameko.web.handlers import http
+from nameko.web.handlers import HttpRequestHandler
 from nameko.rpc import RpcProxy
+from werkzeug.exceptions import BadRequest, Unauthorized, Forbidden
+import jwt
+
+
+class HttpAuthenticatedRequestHandler(HttpRequestHandler):
+    
+    def handle_request(self, request):
+        
+        if not request.headers.get('Authorization'):
+            raise Unauthorized()
+            
+        token = request.headers.get('Authorization')
+        
+        try:
+            payload = jwt.decode(token, self.container.config['SECRET_KEY'], algorithms='HS256')
+        except jwt.DecodeError:
+            raise Unauthorized()
+        except jwt.ExpiredSignatureError:
+            raise Unauthorized()
+            
+        if payload not in ('admin','write',):
+            raise Forbidden()
+            
+        return super(HttpAuthenticatedRequestHandler, self).handle_request(request)  
+
+
+http=HttpAuthenticatedRequestHandler.decorator
 
 
 class ApiService(object):

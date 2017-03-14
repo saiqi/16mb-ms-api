@@ -3,3 +3,4 @@ WEB_SERVER_ADDRESS: '0.0.0.0:5000'
 # rpc_exchange: 'ms-queue'
 max_workers: 10
 parent_calls_tracked: 10
+SECRET_KEY: ${SECRET_KEY}
