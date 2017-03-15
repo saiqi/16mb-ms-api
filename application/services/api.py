@@ -22,7 +22,7 @@ class HttpAuthenticatedRequestHandler(HttpRequestHandler):
         except jwt.ExpiredSignatureError:
             raise Unauthorized()
             
-        if payload['role'] not in ('admin','write',):
+        if payload['role'] not in ('admin', 'write',):
             raise Forbidden()
             
         return super(HttpAuthenticatedRequestHandler, self).handle_request(request)  
