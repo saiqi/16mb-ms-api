@@ -5,3 +5,4 @@ notebooks/
 core.*
 venv/
 .che/
+.cache/
