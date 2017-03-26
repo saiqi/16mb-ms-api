@@ -87,3 +87,34 @@ class ApiService(object):
             rpc.opta_collector.update_all_f9.call_async(season_id, competition_id)
 
             return 'Inserting Opta F9 for season {} and competition {} ...'.format(season_id, competition_id)
+
+    @http('POST', '/api/v1/command/picture/add')
+    def picture_add(self, request):
+        try:
+            data = json.loads(request.get_data(as_text=True))
+            entity_id = data['entity_id']
+            context_id = data['context_id']
+            format_id = data['format_id']
+            picture_b64 = data['picture_b64']
+        except:
+            raise BadRequest()
+
+        with ClusterRpcProxy(self.config) as rpc:
+            rpc.picturestore.add_picture.call_async(entity_id, context_id, format_id, picture_b64)
+
+            return 'Uploading picture for {} in context {} in format {}'.format(entity_id, context_id, format_id)
+
+    @http('POST', '/api/v1/command/picture/delete')
+    def picture_delete(self, request):
+        try:
+            data = json.loads(request.get_data(as_text=True))
+            entity_id = data['entity_id']
+            context_id = data['context_id']
+            format_id = data['format_id']
+        except:
+            raise BadRequest()
+
+        with ClusterRpcProxy(self.config) as rpc:
+            rpc.picturestore.delete_picture.call_async(entity_id, context_id, format_id)
+
+            return 'Deleting picture for {} in context {} in format {}'.format(entity_id, context_id, format_id)
