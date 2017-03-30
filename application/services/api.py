@@ -118,3 +118,34 @@ class ApiService(object):
             rpc.picturestore.delete_picture.call_async(entity_id, context_id, format_id)
 
             return 'Deleting picture for {} in context {} in format {}'.format(entity_id, context_id, format_id)
+
+    @http('POST', '/api/v1/command/formula/add')
+    def formula_add(self, request):
+        try:
+            data = json.loads(request.get_data(as_text=True))
+            raw_formula = data['raw_formula']
+            name = data['name']
+            is_success_rate = data['is_success_rate']
+            is_negative = data['is_negative']
+            context = data['context']
+            category = data['category']
+        except:
+            raise BadRequest()
+
+        with ClusterRpcProxy(self.config) as rpc:
+            rpc.formulastore.add_formula.call_async(raw_formula, name, is_success_rate, is_negative, context, category)
+
+            return 'Inserting new formula {} ...'.format(name)
+
+    @http('POST', '/api/v1/command/formula/delete')
+    def formula_delete(self, request):
+        try:
+            data = json.loads(request.get_data(as_text=True))
+            formula_id = data['formula_id']
+        except:
+            raise BadRequest()
+
+        with ClusterRpcProxy(self.config) as rpc:
+            rpc.formulastore.add_formula.call_async(formula_id)
+
+            return 'Deleting formula {}'.format(formula_id)
