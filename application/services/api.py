@@ -146,6 +146,6 @@ class ApiService(object):
             raise BadRequest()
 
         with ClusterRpcProxy(self.config) as rpc:
-            rpc.formulastore.add_formula.call_async(formula_id)
+            rpc.formulastore.delete_formula.call_async(formula_id)
 
             return 'Deleting formula {}'.format(formula_id)
