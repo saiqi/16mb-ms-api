@@ -132,8 +132,17 @@ class ApiService(object):
         except:
             raise BadRequest()
 
+        to_parse = '|'.join([raw_formula, name, is_success_rate, is_negative])
+
         with ClusterRpcProxy(self.config) as rpc:
-            rpc.formulastore.add_formula.call_async(raw_formula, name, is_success_rate, is_negative, context, category)
+            formulas = rpc.formula_parser.parse([to_parse])
+            rpc.formulastore.add_formula(raw_formula, name, is_success_rate, is_negative, context, category)
+
+            if context == 'soccer':
+                rpc.datastore.delete('SOCCER_ADVANCED_PLAYERSTAT', {'FORMULA_ID': name})
+                query = rpc.dsas_query.get_playerstats_query(formulas)
+                rpc.datastore.insert_from_select.call_async('SOCCER_ADVANCED_PLAYERSTAT', query['query'],
+                                                            query['parameters'])
 
             return 'Inserting new formula {} ...'.format(name)
 
@@ -146,6 +155,11 @@ class ApiService(object):
             raise BadRequest()
 
         with ClusterRpcProxy(self.config) as rpc:
-            rpc.formulastore.delete_formula.call_async(formula_id)
+            formula = rpc.formulastore.get_formula(formula_id)
+
+            if formula['context'] == 'soccer':
+                rpc.datastore.delete.call_async('SOCCER_ADVANCED_PLAYERSTAT', {'FORMULA_ID': formula['name']})
+
+            rpc.formulastore.delete_formula(formula_id)
 
             return 'Deleting formula {}'.format(formula_id)
