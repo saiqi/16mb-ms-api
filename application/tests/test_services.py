@@ -8,9 +8,9 @@ from application.services.api import http
 
 
 class DummyService(object):
-    name = 'summy_service'
+    name = 'dummy_service'
 
-    @http('GET', '/myget')
+    @http('GET', '/myget', ('admin', 'write',))
     def do_get(self, request):
         return 'OK'
 
