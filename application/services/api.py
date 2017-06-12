@@ -5,6 +5,8 @@ from nameko.web.handlers import HttpRequestHandler
 from nameko.standalone.rpc import ClusterRpcProxy
 from nameko.dependency_providers import Config
 from werkzeug.exceptions import BadRequest, Unauthorized, Forbidden
+from werkzeug import Response
+
 import jwt
 import bson.json_util
 
@@ -143,7 +145,7 @@ class ApiService(object):
         with ClusterRpcProxy(self.config) as rpc:
             entity = rpc.referential.get_entity_by_id.call_async(player_id)
 
-            formulas = rpc.formulastore.get_all_formulas('soccer', category)
+            formulas = rpc.formulastore.get_formulas_by_category('soccer', category)
 
             parsed_formulas = rpc.formula_parser.parse(formulas)
 
@@ -160,4 +162,4 @@ class ApiService(object):
             result['entity_informations'] = bson.json_util.loads(entity.result())
             result['stats'] = bson.json_util.loads(stats.result())
 
-            return json.dumps(result)
+            return Response(json.dumps(result), mimetype='application/json')
