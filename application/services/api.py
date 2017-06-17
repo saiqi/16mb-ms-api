@@ -64,11 +64,15 @@ class ApiService(object):
             data = json.loads(request.get_data(as_text=True))
             season_id = data['season_id']
             competition_id = data['competition_id']
+
+            referential_only = False
+            if 'referential_only' in data:
+                referential_only = data['referential_only']
         except:
             raise BadRequest()
 
         with ClusterRpcProxy(self.config) as rpc:
-            rpc.crontask.load_opta_soccer.call_async(season_id, competition_id)
+            rpc.crontask.load_opta_soccer.call_async(season_id, competition_id, referential_only)
 
             return 'Inserting Opta F9 for season {} and competition {} ...'.format(season_id, competition_id)
 
