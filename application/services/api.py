@@ -112,7 +112,7 @@ class ApiService(object):
         try:
             data = json.loads(request.get_data(as_text=True))
             raw_formula = data['raw_formula']
-            name = data['name']
+            id = data['id']
             is_success_rate = data['is_success_rate']
             is_negative = data['is_negative']
             context = data['context']
@@ -121,22 +121,22 @@ class ApiService(object):
             raise BadRequest()
 
         with ClusterRpcProxy(self.config) as rpc:
-            rpc.crontask.add_formula.call_async(raw_formula, name, is_success_rate, is_negative, context, category)
+            rpc.crontask.add_formula.call_async(raw_formula, id, is_success_rate, is_negative, context, category)
 
-            return 'Inserting new formula {} ...'.format(name)
+            return 'Inserting new formula {} ...'.format(id)
 
     @http('POST', '/api/v1/command/formula/delete', ('admin', 'write',))
     def formula_delete(self, request):
         try:
             data = json.loads(request.get_data(as_text=True))
-            formula_id = data['formula_id']
+            id = data['id']
         except:
             raise BadRequest()
 
         with ClusterRpcProxy(self.config) as rpc:
-            rpc.crontask.delete_formula.call_async(formula_id)
+            rpc.crontask.delete_formula.call_async(id)
 
-            return 'Deleting formula {}'.format(formula_id)
+            return 'Deleting formula {}'.format(id)
 
     @http('GET', '/api/v1/query/playerstats/<string:category>', ('admin', 'read', 'write',))
     def get_soccer_playerstats(self, request, category):
