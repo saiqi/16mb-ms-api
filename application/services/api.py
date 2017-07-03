@@ -58,24 +58,6 @@ class ApiService(object):
 
             return 'Inserting Opta F1 for season {} and competition {} ...'.format(season_id, competition_id)
 
-    @http('POST', '/api/v1/command/opta/update_all_f9', ('admin', 'write',))
-    def opta_update_all_f9(self, request):
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            season_id = data['season_id']
-            competition_id = data['competition_id']
-
-            referential_only = False
-            if 'referential_only' in data:
-                referential_only = data['referential_only']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            rpc.crontask.load_opta_soccer.call_async(season_id, competition_id, referential_only)
-
-            return 'Inserting Opta F9 for season {} and competition {} ...'.format(season_id, competition_id)
-
     @http('POST', '/api/v1/command/picture/add', ('admin', 'write',))
     def picture_add(self, request):
         try:
@@ -121,7 +103,7 @@ class ApiService(object):
             raise BadRequest()
 
         with ClusterRpcProxy(self.config) as rpc:
-            rpc.crontask.add_formula.call_async(raw_formula, id, is_success_rate, is_negative, context, category)
+            rpc.formulastore.add_formula.call_async(raw_formula, id, is_success_rate, is_negative, context, category)
 
             return 'Inserting new formula {} ...'.format(id)
 
@@ -134,7 +116,7 @@ class ApiService(object):
             raise BadRequest()
 
         with ClusterRpcProxy(self.config) as rpc:
-            rpc.crontask.delete_formula.call_async(id)
+            rpc.formulastore.delete_formula.call_async(id)
 
             return 'Deleting formula {}'.format(id)
 
