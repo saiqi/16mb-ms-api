@@ -120,11 +120,12 @@ class ApiService(object):
 
             return 'Deleting formula {}'.format(id)
 
-    @http('GET', '/api/v1/query/playerstats/<string:category>', ('admin', 'read', 'write',))
-    def get_soccer_playerstats(self, request, category):
+    @http('GET', '/api/v1/query/playerstats', ('admin', 'read', 'write',))
+    def get_soccer_playerstats(self, request):
         try:
             params = json.loads(request.get_data(as_text=True))
             player_id = params['player_id']
+            category = params['category']
         except:
             raise BadRequest()
 
