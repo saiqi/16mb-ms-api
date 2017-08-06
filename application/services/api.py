@@ -135,6 +135,25 @@ class ApiService(object):
 
             return 'Fitting player DNA pipeline'
 
+    @http('POST', '/api/v1/command/algorithm/soccer/playercluster/fit', ('admin',))
+    def fit_soccer_playercluster(self, request):
+        with ClusterRpcProxy(self.config) as rpc:
+            if rpc.datastore.check_if_function_exists('predict_soccer_player_dna'):
+                fit_function = rpc.dsas_query.get_fit_playercluster_function()
+                predict_function = rpc.dsas_query.get_predict_playercluster_function()
+                fit_query = rpc.dsas_query.get_fit_playercluster_query()
+
+                rpc.datastore.create_or_replace_python_function('fit_soccer_player_cluster', fit_function['function'])
+                rpc.datastore.create_or_replace_python_function('predict_soccer_player_cluster',
+                                                                predict_function['function'])
+
+                rpc.datastore.delete('PIPELINE', {'id': 'soccer_player_cluster'})
+                rpc.datastore.insert_from_select.call_async('PIPELINE', fit_query['query'], None)
+
+                return 'Fitting player cluster pipeline'
+
+            raise BadRequest()
+
     @http('GET', '/api/v1/query/playerstats', ('admin', 'read', 'write',))
     def get_soccer_playerstats(self, request):
         try:
