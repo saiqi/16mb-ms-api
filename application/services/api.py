@@ -120,6 +120,21 @@ class ApiService(object):
 
             return 'Deleting formula {}'.format(id)
 
+    @http('POST', '/api/v1/command/algorithm/soccer/playerdna/fit', ('admin',))
+    def fit_soccer_playerdna(self, request):
+        with ClusterRpcProxy(self.config) as rpc:
+            fit_function = rpc.dsas_query.get_fit_playerdna_function()
+            predict_function = rpc.dsas_query.get_predict_playerdna_function()
+            fit_query = rpc.dsas_query.get_fit_playerdna_query()
+
+            rpc.datastore.create_or_replace_python_function('fit_soccer_player_dna', fit_function['function'])
+            rpc.datastore.create_or_replace_python_function('predict_soccer_player_dna', predict_function['function'])
+
+            rpc.datastore.delete('PIPELINE', {'id': 'soccer_player_dna'})
+            rpc.datastore.insert_from_select.call_async('PIPELINE', fit_query['query'], None)
+
+            return 'Fitting player DNA pipeline'
+
     @http('GET', '/api/v1/query/playerstats', ('admin', 'read', 'write',))
     def get_soccer_playerstats(self, request):
         try:
