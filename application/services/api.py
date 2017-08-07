@@ -120,39 +120,61 @@ class ApiService(object):
 
             return 'Deleting formula {}'.format(id)
 
-    @http('POST', '/api/v1/command/algorithm/soccer/playerdna/fit', ('admin',))
-    def fit_soccer_playerdna(self, request):
-        with ClusterRpcProxy(self.config) as rpc:
-            fit_function = rpc.dsas_query.get_fit_playerdna_function()
-            predict_function = rpc.dsas_query.get_predict_playerdna_function()
-            fit_query = rpc.dsas_query.get_fit_playerdna_query()
-
-            rpc.datastore.create_or_replace_python_function('fit_soccer_player_dna', fit_function['function'])
-            rpc.datastore.create_or_replace_python_function('predict_soccer_player_dna', predict_function['function'])
-
-            rpc.datastore.delete('PIPELINE', {'id': 'soccer_player_dna'})
-            rpc.datastore.insert_from_select.call_async('PIPELINE', fit_query['query'], None)
-
-            return 'Fitting player DNA pipeline'
-
-    @http('POST', '/api/v1/command/algorithm/soccer/playercluster/fit', ('admin',))
-    def fit_soccer_playercluster(self, request):
-        with ClusterRpcProxy(self.config) as rpc:
-            if rpc.datastore.check_if_function_exists('predict_soccer_player_dna'):
-                fit_function = rpc.dsas_query.get_fit_playercluster_function()
-                predict_function = rpc.dsas_query.get_predict_playercluster_function()
-                fit_query = rpc.dsas_query.get_fit_playercluster_query()
-
-                rpc.datastore.create_or_replace_python_function('fit_soccer_player_cluster', fit_function['function'])
-                rpc.datastore.create_or_replace_python_function('predict_soccer_player_cluster',
-                                                                predict_function['function'])
-
-                rpc.datastore.delete('PIPELINE', {'id': 'soccer_player_cluster'})
-                rpc.datastore.insert_from_select.call_async('PIPELINE', fit_query['query'], None)
-
-                return 'Fitting player cluster pipeline'
-
+    @http('POST', '/api/v1/command/algorithm/add', ('admin',))
+    def algorithm_add(self, request):
+        try:
+            data = json.loads(request.get_data(as_text=True))
+            id = data['id']
+            train_dataset = data['train_dataset']
+            run_dataset = data['run_dataset']
+            fit_function = data['fit_function']
+            predict_function = data['predict_function']
+            context = data['context']
+            target_table = data['target_table']
+            depends_on_id = None
+            if 'depends_on_id' in data:
+                depends_on_id = data['depends_on_id']
+        except:
             raise BadRequest()
+
+        with ClusterRpcProxy(self.config) as rpc:
+            rpc.algorithm.add_algorithm.call_async(id, train_dataset, run_dataset, fit_function, predict_function,
+                                                   depends_on_id, context, target_table)
+
+            return 'Inserting new algorithm {} ...'.format(id)
+
+    @http('POST', '/api/v1/command/algorithm/delete', ('admin',))
+    def algorithm_delete(self, request):
+        try:
+            data = json.loads(request.get_data(as_text=True))
+            id = data['id']
+        except:
+            raise BadRequest()
+
+        with ClusterRpcProxy(self.config) as rpc:
+            rpc.algorithm.delete_algorithm.call_async(id)
+
+            return 'Deleting algorithm {} ...'.format(id)
+
+    @http('POST', '/api/v1/command/algorithm/fit', ('admin',))
+    def fit_algorithm(self, request):
+
+        try:
+            data = json.loads(request.get_data(as_text=True))
+            id = data['id']
+        except:
+            raise BadRequest()
+
+        with ClusterRpcProxy(self.config) as rpc:
+            algo = rpc.algorithm.get_algorithm(id)
+
+            rpc.datastore.create_or_replace_python_function(algo['fit_function_name'], algo['fit_function'])
+            rpc.datastore.create_or_replace_python_function(algo['predict_function_name'], algo['predict_function'])
+
+            rpc.datastore.delete('PIPELINE', {'id': algo['id']})
+            rpc.datastore.insert_from_select.call_async('PIPELINE', algo['train_dataset'], None)
+
+            return 'Fitting algorithm {}'.format(algo['id'])
 
     @http('GET', '/api/v1/query/playerstats', ('admin', 'read', 'write',))
     def get_soccer_playerstats(self, request):
