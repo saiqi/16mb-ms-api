@@ -120,6 +120,13 @@ class ApiService(object):
 
             return 'Deleting formula {}'.format(id)
 
+    @http('GET', '/api/v1/query/formula/all', ('admin', 'write'))
+    def formula_all(self, request):
+        with ClusterRpcProxy(self.config) as rpc:
+            result = rpc.formulastore.get_formulas()
+
+            return Response(json.dumps(result), mimetype='application/json')
+
     @http('POST', '/api/v1/command/algorithm/add', ('admin',))
     def algorithm_add(self, request):
         try:
