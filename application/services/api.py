@@ -56,7 +56,7 @@ class ApiService(object):
         with ClusterRpcProxy(self.config) as rpc:
             rpc.opta_collector.add_f1.call_async(season_id, competition_id)
 
-            return 'Inserting Opta F1 for season {} and competition {} ...'.format(season_id, competition_id)
+            return 'Inserting Opta F1 for season {} and competition {}'.format(season_id, competition_id)
 
     @http('POST', '/api/v1/command/picture/add', ('admin', 'write',))
     def picture_add(self, request):
@@ -105,7 +105,7 @@ class ApiService(object):
         with ClusterRpcProxy(self.config) as rpc:
             rpc.formulastore.add_formula.call_async(raw_formula, id, is_success_rate, is_negative, context, category)
 
-            return 'Inserting new formula {} ...'.format(id)
+            return 'Inserting new formula {}'.format(id)
 
     @http('POST', '/api/v1/command/formula/delete', ('admin', 'write',))
     def formula_delete(self, request):
@@ -136,6 +136,48 @@ class ApiService(object):
 
             return Response(json.dumps(result), mimetype='application/json')
 
+    @http('POST', '/api/v1/command/translation/add', ('admin', 'write',))
+    def translation_add(self, request):
+        try:
+            data = json.loads(request.get_data(as_text=True))
+            identifier = data['identifier']
+            language = data['language']
+            translation = data['translation']
+        except:
+            raise BadRequest()
+
+        with ClusterRpcProxy(self.config) as rpc:
+            rpc.internationalizer.add_translation.call_async(identifier, language, translation)
+            
+            return 'Inserting translation {} {}'.format(identifier, language)
+
+    @http('POST', '/api/v1/command/translation/delete', ('admin', 'write',))
+    def translation_delete(self, request):
+        try:
+            data = json.loads(request.get_data(as_text=True))
+            identifier = data['identifier']
+            language = data['language']
+        except:
+            raise BadRequest()
+
+        with ClusterRpcProxy(self.config) as rpc:
+            rpc.internationalizer.delete_translation.call_async(identifier, language)
+
+            return 'Deleting translation {} {}'.format(identifier, language)
+
+    @http('GET', '/api/v1/query/translations', ('admin', 'write',))
+    def get_translations(self, request):
+        data = None
+        if request.get_data():
+            data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            if data and 'identifier' in data:
+                result = rpc.internationalizer.get_translations_by_identifier(data['identifier'])
+            else:
+                result = rpc.internationalizer.get_all_translations()
+
+            return Response(json.dumps(result), mimetype='application/json')
+
     @http('POST', '/api/v1/command/algorithm/add', ('admin',))
     def algorithm_add(self, request):
         try:
@@ -157,7 +199,7 @@ class ApiService(object):
             rpc.algorithm.add_algorithm.call_async(id, train_dataset, run_dataset, fit_function, predict_function,
                                                    depends_on_id, context, target_table)
 
-            return 'Inserting new algorithm {} ...'.format(id)
+            return 'Inserting new algorithm {}'.format(id)
 
     @http('POST', '/api/v1/command/algorithm/delete', ('admin',))
     def algorithm_delete(self, request):
@@ -170,7 +212,7 @@ class ApiService(object):
         with ClusterRpcProxy(self.config) as rpc:
             rpc.algorithm.delete_algorithm.call_async(id)
 
-            return 'Deleting algorithm {} ...'.format(id)
+            return 'Deleting algorithm {}'.format(id)
 
     @http('POST', '/api/v1/command/algorithm/fit', ('admin',))
     def fit_algorithm(self, request):
