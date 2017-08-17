@@ -120,10 +120,19 @@ class ApiService(object):
 
             return 'Deleting formula {}'.format(id)
 
-    @http('GET', '/api/v1/query/formula/all', ('admin', 'write'))
-    def formula_all(self, request):
+    @http('GET', '/api/v1/query/formulas', ('admin', 'write'))
+    def get_formulas(self, request):
+        data = None
+        if request.get_data():
+            data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
-            result = rpc.formulastore.get_formulas()
+            if data and 'context' in data:
+                if 'category' in data:
+                    result = rpc.formulastore.get_formulas_by_category(data['context'], data['category'])
+                else:
+                    result = rpc.formulastore.get_formulas_by_context(data['context'])
+            else:
+                result = rpc.formulastore.get_formulas()
 
             return Response(json.dumps(result), mimetype='application/json')
 
