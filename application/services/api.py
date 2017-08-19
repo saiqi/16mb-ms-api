@@ -188,7 +188,7 @@ class ApiService(object):
             fit_function = data['fit_function']
             predict_function = data['predict_function']
             context = data['context']
-            target_table = data['target_table']
+            result_table = data['result_table']
             depends_on_id = None
             if 'depends_on_id' in data:
                 depends_on_id = data['depends_on_id']
@@ -197,7 +197,7 @@ class ApiService(object):
 
         with ClusterRpcProxy(self.config) as rpc:
             rpc.algorithm.add_algorithm.call_async(id, train_dataset, run_dataset, fit_function, predict_function,
-                                                   depends_on_id, context, target_table)
+                                                   depends_on_id, context, result_table)
 
             return 'Inserting new algorithm {}'.format(id)
 
@@ -233,6 +233,19 @@ class ApiService(object):
             rpc.datastore.insert_from_select.call_async('PIPELINE', algo['train_dataset'], None)
 
             return 'Fitting algorithm {}'.format(algo['id'])
+
+    @http('GET', '/api/v1/query/algorithms', ('admin', 'write',))
+    def get_translations(self, request):
+        data = None
+        if request.get_data():
+            data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            if data and 'context' in data:
+                result = rpc.algorithm.get_algorithms_by_context(data['context'])
+            else:
+                result = rpc.algorithm.get_all_algorithms()
+
+            return Response(json.dumps(result), mimetype='application/json')
 
     @http('GET', '/api/v1/query/playerstats', ('admin', 'read', 'write',))
     def get_soccer_playerstats(self, request):
