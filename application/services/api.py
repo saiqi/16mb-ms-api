@@ -44,7 +44,7 @@ class ApiService(object):
 
     config = Config()
 
-    @http('POST', '/api/v1/command/opta/add_f1', ('admin', 'write',))
+    @http('POST', '/api/v1/command/opta/add_f1', ('admin', 'write',), expected_exceptions=BadRequest)
     def opta_add_f1(self, request):
         try:
             data = json.loads(request.get_data(as_text=True))
@@ -58,7 +58,7 @@ class ApiService(object):
 
             return 'Inserting Opta F1 for season {} and competition {}'.format(season_id, competition_id)
 
-    @http('POST', '/api/v1/command/picture/add', ('admin', 'write',))
+    @http('POST', '/api/v1/command/picture/add', ('admin', 'write',), expected_exceptions=BadRequest)
     def picture_add(self, request):
         try:
             data = json.loads(request.get_data(as_text=True))
@@ -74,7 +74,7 @@ class ApiService(object):
 
             return 'Uploading picture for {} in context {} in format {}'.format(entity_id, context_id, format_id)
 
-    @http('POST', '/api/v1/command/picture/delete', ('admin', 'write',))
+    @http('POST', '/api/v1/command/picture/delete', ('admin', 'write',), expected_exceptions=BadRequest)
     def picture_delete(self, request):
         try:
             data = json.loads(request.get_data(as_text=True))
@@ -89,7 +89,7 @@ class ApiService(object):
 
             return 'Deleting picture for {} in context {} in format {}'.format(entity_id, context_id, format_id)
 
-    @http('POST', '/api/v1/command/formula/add', ('admin', 'write',))
+    @http('POST', '/api/v1/command/formula/add', ('admin', 'write',), expected_exceptions=BadRequest)
     def formula_add(self, request):
         try:
             data = json.loads(request.get_data(as_text=True))
@@ -107,7 +107,7 @@ class ApiService(object):
 
             return 'Inserting new formula {}'.format(id)
 
-    @http('POST', '/api/v1/command/formula/delete', ('admin', 'write',))
+    @http('POST', '/api/v1/command/formula/delete', ('admin', 'write',), expected_exceptions=BadRequest)
     def formula_delete(self, request):
         try:
             data = json.loads(request.get_data(as_text=True))
@@ -120,7 +120,7 @@ class ApiService(object):
 
             return 'Deleting formula {}'.format(id)
 
-    @http('GET', '/api/v1/query/formulas', ('admin', 'write'))
+    @http('GET', '/api/v1/query/formulas', ('admin', 'write'), expected_exceptions=BadRequest)
     def get_formulas(self, request):
         data = None
         if request.get_data():
@@ -136,7 +136,7 @@ class ApiService(object):
 
             return Response(json.dumps(result), mimetype='application/json')
 
-    @http('POST', '/api/v1/command/translation/add', ('admin', 'write',))
+    @http('POST', '/api/v1/command/translation/add', ('admin', 'write',), expected_exceptions=BadRequest)
     def translation_add(self, request):
         try:
             data = json.loads(request.get_data(as_text=True))
@@ -151,7 +151,7 @@ class ApiService(object):
             
             return 'Inserting translation {} {}'.format(identifier, language)
 
-    @http('POST', '/api/v1/command/translation/delete', ('admin', 'write',))
+    @http('POST', '/api/v1/command/translation/delete', ('admin', 'write',), expected_exceptions=BadRequest)
     def translation_delete(self, request):
         try:
             data = json.loads(request.get_data(as_text=True))
@@ -165,7 +165,7 @@ class ApiService(object):
 
             return 'Deleting translation {} {}'.format(identifier, language)
 
-    @http('GET', '/api/v1/query/translations', ('admin', 'write',))
+    @http('GET', '/api/v1/query/translations', ('admin', 'write',), expected_exceptions=BadRequest)
     def get_translations(self, request):
         data = None
         if request.get_data():
@@ -178,7 +178,7 @@ class ApiService(object):
 
             return Response(json.dumps(result), mimetype='application/json')
 
-    @http('POST', '/api/v1/command/algorithm/add', ('admin',))
+    @http('POST', '/api/v1/command/algorithm/add', ('admin',), expected_exceptions=BadRequest)
     def algorithm_add(self, request):
         try:
             data = json.loads(request.get_data(as_text=True))
@@ -201,7 +201,7 @@ class ApiService(object):
 
             return 'Inserting new algorithm {}'.format(id)
 
-    @http('POST', '/api/v1/command/algorithm/delete', ('admin',))
+    @http('POST', '/api/v1/command/algorithm/delete', ('admin',), expected_exceptions=BadRequest)
     def algorithm_delete(self, request):
         try:
             data = json.loads(request.get_data(as_text=True))
@@ -214,7 +214,7 @@ class ApiService(object):
 
             return 'Deleting algorithm {}'.format(id)
 
-    @http('POST', '/api/v1/command/algorithm/fit', ('admin',))
+    @http('POST', '/api/v1/command/algorithm/fit', ('admin',), expected_exceptions=BadRequest)
     def fit_algorithm(self, request):
 
         try:
@@ -234,7 +234,7 @@ class ApiService(object):
 
             return 'Fitting algorithm {}'.format(algo['id'])
 
-    @http('GET', '/api/v1/query/algorithms', ('admin', 'write',))
+    @http('GET', '/api/v1/query/algorithms', ('admin', 'write',), expected_exceptions=BadRequest)
     def get_algorithms(self, request):
         data = None
         if request.get_data():
@@ -247,7 +247,7 @@ class ApiService(object):
 
             return Response(json.dumps(result), mimetype='application/json')
 
-    @http('GET', '/api/v1/query/playerstats', ('admin', 'read', 'write',))
+    @http('GET', '/api/v1/query/playerstats', ('admin', 'read', 'write',), expected_exceptions=BadRequest)
     def get_soccer_playerstats(self, request):
         try:
             params = json.loads(request.get_data(as_text=True))
