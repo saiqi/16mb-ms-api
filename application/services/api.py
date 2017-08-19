@@ -235,7 +235,7 @@ class ApiService(object):
             return 'Fitting algorithm {}'.format(algo['id'])
 
     @http('GET', '/api/v1/query/algorithms', ('admin', 'write',))
-    def get_translations(self, request):
+    def get_algorithms(self, request):
         data = None
         if request.get_data():
             data = json.loads(request.get_data(as_text=True))
