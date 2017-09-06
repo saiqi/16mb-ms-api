@@ -46,234 +46,65 @@ class ApiService(object):
 
     @http('POST', '/api/v1/command/opta/add_f1', ('admin', 'write',), expected_exceptions=BadRequest)
     def opta_add_f1(self, request):
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            season_id = data['season_id']
-            competition_id = data['competition_id']
-        except:
-            raise BadRequest()
-
+        data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
-            rpc.opta_collector.add_f1.call_async(season_id, competition_id)
-
-            return 'Inserting Opta F1 for season {} and competition {}'.format(season_id, competition_id)
-
-    @http('POST', '/api/v1/command/picture/add', ('admin', 'write',), expected_exceptions=BadRequest)
-    def picture_add(self, request):
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            entity_id = data['entity_id']
-            context_id = data['context_id']
-            format_id = data['format_id']
-            picture_b64 = data['picture_b64']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            rpc.picturestore.add_picture.call_async(entity_id, context_id, format_id, picture_b64)
-
-            return 'Uploading picture for {} in context {} in format {}'.format(entity_id, context_id, format_id)
-
-    @http('POST', '/api/v1/command/picture/delete', ('admin', 'write',), expected_exceptions=BadRequest)
-    def picture_delete(self, request):
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            entity_id = data['entity_id']
-            context_id = data['context_id']
-            format_id = data['format_id']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            rpc.picturestore.delete_picture.call_async(entity_id, context_id, format_id)
-
-            return 'Deleting picture for {} in context {} in format {}'.format(entity_id, context_id, format_id)
-
-    @http('POST', '/api/v1/command/formula/add', ('admin', 'write',), expected_exceptions=BadRequest)
-    def formula_add(self, request):
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            raw_formula = data['raw_formula']
-            id = data['id']
-            is_success_rate = data['is_success_rate']
-            is_negative = data['is_negative']
-            context = data['context']
-            category = data['category']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            rpc.formulastore.add_formula.call_async(raw_formula, id, is_success_rate, is_negative, context, category)
-
-            return 'Inserting new formula {}'.format(id)
-
-    @http('POST', '/api/v1/command/formula/delete', ('admin', 'write',), expected_exceptions=BadRequest)
-    def formula_delete(self, request):
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            id = data['id']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            rpc.formulastore.delete_formula.call_async(id)
-
-            return 'Deleting formula {}'.format(id)
-
-    @http('GET', '/api/v1/query/formulas', ('admin', 'write'), expected_exceptions=BadRequest)
-    def get_formulas(self, request):
-        data = None
-        if request.get_data():
-            data = json.loads(request.get_data(as_text=True))
-        with ClusterRpcProxy(self.config) as rpc:
-            if data and 'context' in data:
-                if 'category' in data:
-                    result = rpc.formulastore.get_formulas_by_category(data['context'], data['category'])
-                else:
-                    result = rpc.formulastore.get_formulas_by_context(data['context'])
-            else:
-                result = rpc.formulastore.get_formulas()
-
-            return Response(json.dumps(result), mimetype='application/json')
-
-    @http('POST', '/api/v1/command/translation/add', ('admin', 'write',), expected_exceptions=BadRequest)
-    def translation_add(self, request):
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            identifier = data['identifier']
-            language = data['language']
-            translation = data['translation']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            rpc.internationalizer.add_translation.call_async(identifier, language, translation)
-            
-            return 'Inserting translation {} {}'.format(identifier, language)
-
-    @http('POST', '/api/v1/command/translation/delete', ('admin', 'write',), expected_exceptions=BadRequest)
-    def translation_delete(self, request):
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            identifier = data['identifier']
-            language = data['language']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            rpc.internationalizer.delete_translation.call_async(identifier, language)
-
-            return 'Deleting translation {} {}'.format(identifier, language)
-
-    @http('GET', '/api/v1/query/translations', ('admin', 'write',), expected_exceptions=BadRequest)
-    def get_translations(self, request):
-        data = None
-        if request.get_data():
-            data = json.loads(request.get_data(as_text=True))
-        with ClusterRpcProxy(self.config) as rpc:
-            if data and 'identifier' in data:
-                result = rpc.internationalizer.get_translations_by_identifier(data['identifier'])
-            else:
-                result = rpc.internationalizer.get_all_translations()
-
-            return Response(json.dumps(result), mimetype='application/json')
-
-    @http('POST', '/api/v1/command/algorithm/add', ('admin',), expected_exceptions=BadRequest)
-    def algorithm_add(self, request):
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            id = data['id']
-            train_dataset = data['train_dataset']
-            run_dataset = data['run_dataset']
-            fit_function = data['fit_function']
-            predict_function = data['predict_function']
-            context = data['context']
-            result_table = data['result_table']
-            depends_on_id = None
-            if 'depends_on_id' in data:
-                depends_on_id = data['depends_on_id']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            rpc.algorithm.add_algorithm.call_async(id, train_dataset, run_dataset, fit_function, predict_function,
-                                                   depends_on_id, context, result_table)
-
-            return 'Inserting new algorithm {}'.format(id)
-
-    @http('POST', '/api/v1/command/algorithm/delete', ('admin',), expected_exceptions=BadRequest)
-    def algorithm_delete(self, request):
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            id = data['id']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            rpc.algorithm.delete_algorithm.call_async(id)
-
-            return 'Deleting algorithm {}'.format(id)
-
-    @http('POST', '/api/v1/command/algorithm/fit', ('admin',), expected_exceptions=BadRequest)
-    def fit_algorithm(self, request):
-
-        try:
-            data = json.loads(request.get_data(as_text=True))
-            id = data['id']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            algo = rpc.algorithm.get_algorithm(id)
-
-            rpc.datastore.create_or_replace_python_function(algo['fit_function_name'], algo['fit_function'])
-            rpc.datastore.create_or_replace_python_function(algo['predict_function_name'], algo['predict_function'])
-
-            rpc.datastore.delete('PIPELINE', {'id': algo['id']})
-            rpc.datastore.insert_from_select.call_async('PIPELINE', algo['train_dataset'], None)
-
-            return 'Fitting algorithm {}'.format(algo['id'])
-
-    @http('GET', '/api/v1/query/algorithms', ('admin', 'write',), expected_exceptions=BadRequest)
-    def get_algorithms(self, request):
-        data = None
-        if request.get_data():
-            data = json.loads(request.get_data(as_text=True))
-        with ClusterRpcProxy(self.config) as rpc:
-            if data and 'context' in data:
-                result = rpc.algorithm.get_algorithms_by_context(data['context'])
-            else:
-                result = rpc.algorithm.get_all_algorithms()
-
-            return Response(json.dumps(result), mimetype='application/json')
-
-    @http('GET', '/api/v1/query/playerstats', ('admin', 'read', 'write',), expected_exceptions=BadRequest)
-    def get_soccer_playerstats(self, request):
-        try:
-            params = json.loads(request.get_data(as_text=True))
-            player_id = params['player_id']
-            category = params['category']
-        except:
-            raise BadRequest()
-
-        with ClusterRpcProxy(self.config) as rpc:
-            entity = rpc.referential.get_entity_by_id.call_async(player_id)
-
-            formulas = rpc.formulastore.get_formulas_by_category('soccer', category)
-
-            parsed_formulas = rpc.formula_parser.parse(formulas)
-
             try:
-                query = rpc.dsas_query.get_playerstats_query(parsed_formulas, params)
+                rpc.opta_collector.add_f1.call_async(**data)
             except:
                 raise BadRequest()
 
-            stats = rpc.datareader.select.call_async(query['query'], query['parameters'])
+            return Response(json.dumps(data), mimetype='application/json', status=201)
 
-            result = dict()
-            result['timestamp'] = datetime.datetime.utcnow().isoformat()
+    @http('POST', '/api/v1/command/metadata/add_transformation', ('admin',), expected_exceptions=BadRequest)
+    def metadata_add_transformation(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.metadata.add_transformation.call_async(**data)
+            except:
+                raise BadRequest()
 
-            result['entity_informations'] = bson.json_util.loads(entity.result())
-            result['stats'] = bson.json_util.loads(stats.result())
+            return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
 
-            return Response(json.dumps(result), mimetype='application/json')
+    @http('POST', '/api/v1/command/metadata/delete_transformation/<string:transformation_id>', ('admin',),
+          expected_exceptions=BadRequest)
+    def metadata_delete_transformation(self, request, transformation_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.metadata.delete_transformation.call_async(transformation_id)
+            except:
+                raise BadRequest()
+
+            return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=204)
+
+    @http('GET', '/api/v1/query/metadata/transformations', ('admin',), expected_exceptions=BadRequest)
+    def metatdata_get_all_transformations(self, request):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = rpc.metadata.get_all_transformations()
+            except:
+                raise BadRequest()
+
+            return Response(result, mimetype='application/json')
+
+    @http('GET', '/api/v1/query/metadata/transformation/<string:transformation_id>', ('admin',),
+          expected_exceptions=BadRequest)
+    def metadata_get_transformation(self, request, transformation_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = rpc.metadata.get_transformation(transformation_id)
+            except:
+                raise BadRequest()
+
+            return Response(result, mimetype='application/json')
+
+    @http('POST', '/api/v1/command/crontask/update_opta_soccer', ('admin',), expected_exceptions=BadRequest)
+    def crontask_update_opta_soccer(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.crontask.update_opta_soccer.call_async(**data)
+            except:
+                raise BadRequest()
+
+            return Response(json.dumps(data), mimetype='application/json', status=201)
