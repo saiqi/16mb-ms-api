@@ -108,3 +108,14 @@ class ApiService(object):
                 raise BadRequest()
 
             return Response(json.dumps(data), mimetype='application/json', status=201)
+
+    @http('GET', '/api/v1/query/datareader/select', ('admin', 'write', 'read',), expected_exceptions=BadRequest)
+    def datareader_select(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = rpc.datareader.select(**data)
+            except:
+                raise BadRequest()
+
+            return Response(result, mimetype='application/json')
