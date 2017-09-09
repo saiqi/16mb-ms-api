@@ -39,6 +39,13 @@ class HttpAuthenticatedRequestHandler(HttpRequestHandler):
 http = HttpAuthenticatedRequestHandler.decorator
 
 
+class DateEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, (datetime.datetime, datetime.date)):
+            return o.isoformat()
+        return json.JSONEncoder.default(self, o)
+
+
 class ApiService(object):
     name = 'api_service'
 
@@ -109,13 +116,29 @@ class ApiService(object):
 
             return Response(json.dumps(data), mimetype='application/json', status=201)
 
+    @http('GET', '/api/v1/query/crontask/logs', ('admin',), expected_exceptions=BadRequest)
+    def crontask_get_logs(self, request):
+        method_name = None
+        if 'method_name' in request.args:
+            method_name = request.args['method_name']
+        tail = 10
+        if 'tail' in request.args:
+            tail = request.args['tail']
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                raw_logs = bson.json_util.loads(rpc.crontask.get_logs(tail=tail, method_name=method_name))
+            except:
+                raise BadRequest()
+
+            return Response(json.dumps(raw_logs, cls=DateEncoder), mimetype='application/json')
+
     @http('GET', '/api/v1/query/datareader/select', ('admin', 'write', 'read',), expected_exceptions=BadRequest)
     def datareader_select(self, request):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                result = rpc.datareader.select(**data)
+                result = bson.json_util.loads(rpc.datareader.select(**data))
             except:
                 raise BadRequest()
 
-            return Response(result, mimetype='application/json')
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
