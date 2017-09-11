@@ -84,6 +84,28 @@ class ApiService(object):
 
             return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=204)
 
+    @http('POST', '/api/v1/command/metadata/deploy_function/<string:transformation_id>', ('admin',),
+          expected_exceptions=BadRequest)
+    def metadata_deploy_function(self, request, transformation_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = rpc.metadata.get_transformation(transformation_id)
+            except:
+                raise BadRequest()
+
+            if not result:
+                raise BadRequest()
+
+            transformation = bson.json_util.loads(result)
+
+            try:
+                rpc.datastore.create_or_replace_python_function(transformation['function_name'],
+                                                                transformation['function'])
+            except:
+                raise BadRequest()
+
+            return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=201)
+
     @http('GET', '/api/v1/query/metadata/transformations', ('admin',), expected_exceptions=BadRequest)
     def metatdata_get_all_transformations(self, request):
         with ClusterRpcProxy(self.config) as rpc:
