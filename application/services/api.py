@@ -51,6 +51,13 @@ class ApiService(object):
 
     config = Config()
 
+    @staticmethod
+    def _add_response_headers(response):
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        return response
+
     @http('POST', '/api/v1/command/opta/add_f1', ('admin', 'write',), expected_exceptions=BadRequest)
     def opta_add_f1(self, request):
         data = json.loads(request.get_data(as_text=True))
@@ -60,7 +67,7 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return Response(json.dumps(data), mimetype='application/json', status=201)
+            return self._add_response_headers(Response(json.dumps(data), mimetype='application/json', status=201))
 
     @http('POST', '/api/v1/command/metadata/add_transformation', ('admin',), expected_exceptions=BadRequest)
     def metadata_add_transformation(self, request):
@@ -71,7 +78,8 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
+            return self._add_response_headers(Response(json.dumps({'id': data['_id']}), mimetype='application/json',
+                                                       status=201))
 
     @http('POST', '/api/v1/command/metadata/delete_transformation/<string:transformation_id>', ('admin',),
           expected_exceptions=BadRequest)
@@ -82,7 +90,8 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=204)
+            return self._add_response_headers(Response(json.dumps({'id': transformation_id}),
+                                                       mimetype='application/json', status=204))
 
     @http('POST', '/api/v1/command/metadata/deploy_function/<string:transformation_id>', ('admin',),
           expected_exceptions=BadRequest)
@@ -104,7 +113,8 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=201)
+            return self._add_response_headers(Response(json.dumps({'id': transformation_id}),
+                                                       mimetype='application/json', status=201))
 
     @http('GET', '/api/v1/query/metadata/transformations', ('admin',), expected_exceptions=BadRequest)
     def metatdata_get_all_transformations(self, request):
@@ -114,7 +124,7 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return Response(result, mimetype='application/json')
+            return self._add_response_headers(Response(result, mimetype='application/json'))
 
     @http('GET', '/api/v1/query/metadata/transformation/<string:transformation_id>', ('admin',),
           expected_exceptions=BadRequest)
@@ -125,7 +135,7 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return Response(result, mimetype='application/json')
+            return self._add_response_headers(Response(result, mimetype='application/json'))
 
     @http('POST', '/api/v1/command/crontask/update_opta_soccer', ('admin',), expected_exceptions=BadRequest)
     def crontask_update_opta_soccer(self, request):
@@ -136,7 +146,7 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return Response(json.dumps(data), mimetype='application/json', status=201)
+            return self._add_response_headers(Response(json.dumps(data), mimetype='application/json', status=201))
 
     @http('GET', '/api/v1/query/crontask/logs', ('admin',), expected_exceptions=BadRequest)
     def crontask_get_logs(self, request):
@@ -152,7 +162,8 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return Response(json.dumps(raw_logs, cls=DateEncoder), mimetype='application/json')
+            return self._add_response_headers(Response(json.dumps(raw_logs, cls=DateEncoder),
+                                                       mimetype='application/json'))
 
     @http('GET', '/api/v1/query/datareader/select', ('admin', 'write', 'read',), expected_exceptions=BadRequest)
     def datareader_select(self, request):
@@ -163,4 +174,5 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+            return self._add_response_headers(Response(json.dumps(result, cls=DateEncoder),
+                                                       mimetype='application/json'))
