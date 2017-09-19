@@ -61,20 +61,21 @@ class HttpAuthenticatedRequestHandler(CorsHttpRequestHandler):
 
     def handle_request(self, request):
 
-        if not request.headers.get('Authorization'):
-            raise Unauthorized()
+        if request.method != 'OPTIONS':
+            if not request.headers.get('Authorization'):
+                raise Unauthorized()
 
-        token = request.headers.get('Authorization')
+            token = request.headers.get('Authorization')
 
-        try:
-            payload = jwt.decode(token, self.container.config['SECRET_KEY'], algorithms='HS256')
-        except jwt.DecodeError:
-            raise Unauthorized()
-        except jwt.ExpiredSignatureError:
-            raise Unauthorized()
+            try:
+                payload = jwt.decode(token, self.container.config['SECRET_KEY'], algorithms='HS256')
+            except jwt.DecodeError:
+                raise Unauthorized()
+            except jwt.ExpiredSignatureError:
+                raise Unauthorized()
 
-        if payload['role'] not in self.allowed_roles:
-            raise Forbidden()
+            if payload['role'] not in self.allowed_roles:
+                raise Forbidden()
 
         return super(HttpAuthenticatedRequestHandler, self).handle_request(request)
 
