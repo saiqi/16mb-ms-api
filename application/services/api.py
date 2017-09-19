@@ -1,9 +1,11 @@
 import json
 import datetime
+from functools import partial
 
 from nameko.web.handlers import HttpRequestHandler
 from nameko.standalone.rpc import ClusterRpcProxy
 from nameko.dependency_providers import Config
+from nameko.extensions import register_entrypoint
 from werkzeug.exceptions import BadRequest, Unauthorized, Forbidden
 from werkzeug import Response
 
@@ -11,8 +13,49 @@ import jwt
 import bson.json_util
 
 
-class HttpAuthenticatedRequestHandler(HttpRequestHandler):
-    def __init__(self, method, url, allowed_roles, expected_exceptions=()):
+class CorsHttpRequestHandler(HttpRequestHandler):
+    def __init__(self, method, url, expected_exceptions=(), **kwargs):
+        super().__init__(method, url, expected_exceptions=expected_exceptions)
+        self.allowed_origin = kwargs.get('origin', ['*'])
+        self.allowed_methods = kwargs.get('method', ['*'])
+        self.allow_credentials = kwargs.get('credentials', True)
+
+    def handle_request(self, request):
+        self.request = request
+        if request.method == 'OPTIONS':
+            return self.response_from_result(result='')
+        return super().handle_request(request)
+
+    def response_from_result(self, *args, **kwargs):
+        response = super(CorsHttpRequestHandler, self).response_from_result(*args, **kwargs)
+        response.headers.add("Access-Control-Allow-Headers",
+                             self.request.headers.get("Access-Control-Request-Headers"))
+        response.headers.add("Access-Control-Allow-Credentials", str(self.allow_credentials).lower())
+        response.headers.add("Access-Control-Allow-Methods", ",".join(self.allowed_methods))
+        response.headers.add("Access-Control-Allow-Origin", ",".join(self.allowed_origin))
+        return response
+
+    @classmethod
+    def decorator(cls, *args, **kwargs):
+
+        def registering_decorator(fn, args, kwargs):
+            instance = cls(*args, **kwargs)
+            register_entrypoint(fn, instance)
+            if instance.method in ('GET', 'POST', 'DELETE', 'PUT') and \
+                    ('*' in instance.allowed_methods or instance.method in instance.allowed_methods):
+                options_args = ['OPTIONS'] + list(args[1:])
+                options_instance = cls(*options_args, **kwargs)
+                register_entrypoint(fn, options_instance)
+            return fn
+
+        if len(args) == 1 and isinstance(args[0], types.FunctionType):
+            return registering_decorator(args[0], args=(), kwargs={})
+        else:
+            return partial(registering_decorator, args=args, kwargs=kwargs)
+
+
+class HttpAuthenticatedRequestHandler(CorsHttpRequestHandler):
+    def __init__(self, method, url, expected_exceptions=(), allowed_roles=()):
         self.allowed_roles = allowed_roles
         super().__init__(method, url, expected_exceptions=expected_exceptions)
 
@@ -36,7 +79,7 @@ class HttpAuthenticatedRequestHandler(HttpRequestHandler):
         return super(HttpAuthenticatedRequestHandler, self).handle_request(request)
 
 
-http = HttpAuthenticatedRequestHandler.decorator
+cors_http = HttpAuthenticatedRequestHandler.decorator
 
 
 class DateEncoder(json.JSONEncoder):
@@ -51,14 +94,7 @@ class ApiService(object):
 
     config = Config()
 
-    @staticmethod
-    def _add_response_headers(response):
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        return response
-
-    @http('POST', '/api/v1/command/opta/add_f1', ('admin', 'write',), expected_exceptions=BadRequest)
+    @cors_http('POST', '/api/v1/command/opta/add_f1', allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
     def opta_add_f1(self, request):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
@@ -67,9 +103,10 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return self._add_response_headers(Response(json.dumps(data), mimetype='application/json', status=201))
+            return Response(json.dumps(data), mimetype='application/json', status=201)
 
-    @http('POST', '/api/v1/command/metadata/add_transformation', ('admin',), expected_exceptions=BadRequest)
+    @cors_http('POST', '/api/v1/command/metadata/add_transformation', allowed_roles=('admin',),
+               expected_exceptions=BadRequest)
     def metadata_add_transformation(self, request):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
@@ -78,11 +115,10 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return self._add_response_headers(Response(json.dumps({'id': data['_id']}), mimetype='application/json',
-                                                       status=201))
+            return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
 
-    @http('POST', '/api/v1/command/metadata/delete_transformation/<string:transformation_id>', ('admin',),
-          expected_exceptions=BadRequest)
+    @cors_http('POST', '/api/v1/command/metadata/delete_transformation/<string:transformation_id>',
+               allowed_roles=('admin',), expected_exceptions=BadRequest)
     def metadata_delete_transformation(self, request, transformation_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -90,11 +126,10 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return self._add_response_headers(Response(json.dumps({'id': transformation_id}),
-                                                       mimetype='application/json', status=204))
+            return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=204)
 
-    @http('POST', '/api/v1/command/metadata/deploy_function/<string:transformation_id>', ('admin',),
-          expected_exceptions=BadRequest)
+    @cors_http('POST', '/api/v1/command/metadata/deploy_function/<string:transformation_id>', allowed_roles=('admin',),
+               expected_exceptions=BadRequest)
     def metadata_deploy_function(self, request, transformation_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -113,10 +148,10 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return self._add_response_headers(Response(json.dumps({'id': transformation_id}),
-                                                       mimetype='application/json', status=201))
+            return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=201)
 
-    @http('GET', '/api/v1/query/metadata/transformations', ('admin',), expected_exceptions=BadRequest)
+    @cors_http('GET', '/api/v1/query/metadata/transformations', allowed_roles=('admin',),
+               expected_exceptions=BadRequest)
     def metatdata_get_all_transformations(self, request):
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -124,10 +159,10 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return self._add_response_headers(Response(result, mimetype='application/json'))
+            return Response(result, mimetype='application/json')
 
-    @http('GET', '/api/v1/query/metadata/transformation/<string:transformation_id>', ('admin',),
-          expected_exceptions=BadRequest)
+    @cors_http('GET', '/api/v1/query/metadata/transformation/<string:transformation_id>', allowed_roles=('admin',),
+               expected_exceptions=BadRequest)
     def metadata_get_transformation(self, request, transformation_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -135,9 +170,10 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return self._add_response_headers(Response(result, mimetype='application/json'))
+            return Response(result, mimetype='application/json')
 
-    @http('POST', '/api/v1/command/crontask/update_opta_soccer', ('admin',), expected_exceptions=BadRequest)
+    @cors_http('POST', '/api/v1/command/crontask/update_opta_soccer', allowed_roles=('admin',),
+               expected_exceptions=BadRequest)
     def crontask_update_opta_soccer(self, request):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
@@ -146,9 +182,9 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return self._add_response_headers(Response(json.dumps(data), mimetype='application/json', status=201))
+            return Response(json.dumps(data), mimetype='application/json', status=201)
 
-    @http('GET', '/api/v1/query/crontask/logs', ('admin',), expected_exceptions=BadRequest)
+    @cors_http('GET', '/api/v1/query/crontask/logs', allowed_roles=('admin',), expected_exceptions=BadRequest)
     def crontask_get_logs(self, request):
         method_name = None
         if 'method_name' in request.args:
@@ -162,10 +198,10 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return self._add_response_headers(Response(json.dumps(raw_logs, cls=DateEncoder),
-                                                       mimetype='application/json'))
+            return Response(json.dumps(raw_logs, cls=DateEncoder), mimetype='application/json')
 
-    @http('GET', '/api/v1/query/datareader/select', ('admin', 'write', 'read',), expected_exceptions=BadRequest)
+    @cors_http('GET', '/api/v1/query/datareader/select', allowed_roles=('admin', 'write', 'read',),
+               expected_exceptions=BadRequest)
     def datareader_select(self, request):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
@@ -174,5 +210,4 @@ class ApiService(object):
             except:
                 raise BadRequest()
 
-            return self._add_response_headers(Response(json.dumps(result, cls=DateEncoder),
-                                                       mimetype='application/json'))
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
