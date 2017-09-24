@@ -102,7 +102,7 @@ class ApiService(object):
             try:
                 rpc.opta_collector.add_f1.call_async(**data)
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while adding Opta F1 file')
 
             return Response(json.dumps(data), mimetype='application/json', status=201)
 
@@ -114,7 +114,7 @@ class ApiService(object):
             try:
                 rpc.metadata.add_transformation.call_async(**data)
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while adding transformation')
 
             return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
 
@@ -125,7 +125,7 @@ class ApiService(object):
             try:
                 rpc.metadata.delete_transformation.call_async(transformation_id)
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while deleting transformation: {}'.format(transformation_id))
 
             return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=204)
 
@@ -136,10 +136,10 @@ class ApiService(object):
             try:
                 result = rpc.metadata.get_transformation(transformation_id)
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while retrieving transformation: {}'.format(transformation_id))
 
             if not result:
-                raise BadRequest()
+                raise BadRequest('No transformation {} in metadata'.format(transformation_id))
 
             transformation = bson.json_util.loads(result)
 
@@ -147,7 +147,7 @@ class ApiService(object):
                 rpc.datastore.create_or_replace_python_function(transformation['function_name'],
                                                                 transformation['function'])
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while creating python function')
 
             return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=201)
 
@@ -158,7 +158,7 @@ class ApiService(object):
             try:
                 result = bson.json_util.loads(rpc.metadata.get_all_transformations())
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while retrieving all transformations')
 
             return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
@@ -169,7 +169,7 @@ class ApiService(object):
             try:
                 result = bson.json_util.loads(rpc.metadata.get_transformation(transformation_id))
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while retrieving transformation: {}'.format(transformation_id))
 
             return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
@@ -181,7 +181,7 @@ class ApiService(object):
             try:
                 rpc.metadata.add_query.call_async(**data)
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while adding query')
 
             return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
 
@@ -192,29 +192,55 @@ class ApiService(object):
             try:
                 rpc.metadata.delete_query.call_async(query_id)
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while deleting query: {}'.format(query_id))
 
             return Response(json.dumps({'id': query_id}), mimetype='application/json', status=204)
 
-    @cors_http('GET', '/api/v1/query/metadata/queries', allowed_roles=('admin', 'write'),
+    @cors_http('GET', '/api/v1/query/metadata/queries', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def metatdata_get_all_queries(self, request):
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 result = bson.json_util.loads(rpc.metadata.get_all_queries())
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while retrieving all queries')
 
             return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
-    @cors_http('GET', '/api/v1/query/metadata/query/<string:query_id>', allowed_roles=('admin', 'write',),
+    @cors_http('GET', '/api/v1/query/metadata/query/<string:query_id>', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def metadata_get_transformation(self, request, query_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 result = bson.json_util.loads(rpc.metadata.get_query(query_id))
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while retrieving query: {}'.format(query_id))
+
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('GET', '/api/v1/query/metadata/query/resolve/<string:query_id>',
+               allowed_roles=('admin', 'read', 'write'), expected_exceptions=BadRequest)
+    def metadata_resolve_query(self, request, query_id):
+        args = request.args
+        with ClusterRpcProxy(self.config) as rpc:
+            query = bson.json_util.loads(rpc.metadata.get_query(query_id))
+
+            if query is None:
+                raise BadRequest('Can not find query with id: {}'.format(query_id))
+
+            params = None
+            if query['parameters'] is not None:
+                if sorted(query['parameters']) != sorted(args.keys()):
+                    raise BadRequest('Request arguments are mismatching expected query parameters')
+                params = [args[p] for p in query['parameters']]
+
+            try:
+                if params is not None:
+                    result = bson.json_util.loads(rpc.datareader.select(query['sql'], params))
+                else:
+                    result = bson.json_util.loads(rpc.datareader.select(query['sql']))
+            except:
+                raise BadRequest('An error occurred while executing query')
 
             return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
@@ -226,7 +252,7 @@ class ApiService(object):
             try:
                 rpc.crontask.update_opta_soccer.call_async(**data)
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while submitting update opta soccer task')
 
             return Response(json.dumps(data), mimetype='application/json', status=201)
 
@@ -242,7 +268,7 @@ class ApiService(object):
             try:
                 raw_logs = bson.json_util.loads(rpc.crontask.get_logs(tail=tail, method_name=method_name))
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while retrieving crontask logs')
 
             return Response(json.dumps(raw_logs, cls=DateEncoder), mimetype='application/json')
 
@@ -254,6 +280,6 @@ class ApiService(object):
             try:
                 result = bson.json_util.loads(rpc.datareader.select(**data))
             except:
-                raise BadRequest()
+                raise BadRequest('An error occurred while getting result from datareader')
 
             return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
