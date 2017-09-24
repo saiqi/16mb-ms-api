@@ -118,7 +118,7 @@ class ApiService(object):
 
             return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
 
-    @cors_http('POST', '/api/v1/command/metadata/delete_transformation/<string:transformation_id>',
+    @cors_http('DELETE', '/api/v1/command/metadata/delete_transformation/<string:transformation_id>',
                allowed_roles=('admin',), expected_exceptions=BadRequest)
     def metadata_delete_transformation(self, request, transformation_id):
         with ClusterRpcProxy(self.config) as rpc:
@@ -156,22 +156,67 @@ class ApiService(object):
     def metatdata_get_all_transformations(self, request):
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                result = rpc.metadata.get_all_transformations()
+                result = bson.json_util.loads(rpc.metadata.get_all_transformations())
             except:
                 raise BadRequest()
 
-            return Response(result, mimetype='application/json')
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('GET', '/api/v1/query/metadata/transformation/<string:transformation_id>', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def metadata_get_transformation(self, request, transformation_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                result = rpc.metadata.get_transformation(transformation_id)
+                result = bson.json_util.loads(rpc.metadata.get_transformation(transformation_id))
             except:
                 raise BadRequest()
 
-            return Response(result, mimetype='application/json')
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('POST', '/api/v1/command/metadata/add_query', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
+    def metadata_add_query(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.metadata.add_query.call_async(**data)
+            except:
+                raise BadRequest()
+
+            return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
+
+    @cors_http('DELETE', '/api/v1/command/metadata/delete_query/<string:query_id>',
+               allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    def metadata_delete_query(self, request, query_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.metadata.delete_query.call_async(query_id)
+            except:
+                raise BadRequest()
+
+            return Response(json.dumps({'id': query_id}), mimetype='application/json', status=204)
+
+    @cors_http('GET', '/api/v1/query/metadata/queries', allowed_roles=('admin', 'write'),
+               expected_exceptions=BadRequest)
+    def metatdata_get_all_queries(self, request):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = bson.json_util.loads(rpc.metadata.get_all_queries())
+            except:
+                raise BadRequest()
+
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('GET', '/api/v1/query/metadata/query/<string:query_id>', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
+    def metadata_get_transformation(self, request, query_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = bson.json_util.loads(rpc.metadata.get_query(query_id))
+            except:
+                raise BadRequest()
+
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/crontask/update_opta_soccer', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
