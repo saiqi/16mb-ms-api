@@ -106,6 +106,17 @@ class ApiService(object):
 
             return Response(json.dumps(data), mimetype='application/json', status=201)
 
+    @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    def opta_add_f1(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.opta_collector.add_ru1.call_async(**data)
+            except:
+                raise BadRequest('An error occurred while adding Opta RU1 file')
+
+            return Response(json.dumps(data), mimetype='application/json', status=201)
+
     @cors_http('POST', '/api/v1/command/metadata/add_transformation', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def metadata_add_transformation(self, request):
@@ -253,6 +264,18 @@ class ApiService(object):
                 rpc.crontask.update_opta_soccer.call_async(**data)
             except:
                 raise BadRequest('An error occurred while submitting update opta soccer task')
+
+            return Response(json.dumps(data), mimetype='application/json', status=201)
+
+    @cors_http('POST', '/api/v1/command/crontask/update_opta_rubgy', allowed_roles=('admin',),
+               expected_exceptions=BadRequest)
+    def crontask_update_opta_soccer(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.crontask.update_opta_rugby.call_async(**data)
+            except:
+                raise BadRequest('An error occurred while submitting update opta rugby task')
 
             return Response(json.dumps(data), mimetype='application/json', status=201)
 
