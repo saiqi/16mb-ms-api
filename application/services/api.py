@@ -267,7 +267,7 @@ class ApiService(object):
 
             return Response(json.dumps(data), mimetype='application/json', status=201)
 
-    @cors_http('POST', '/api/v1/command/crontask/update_opta_rubgy', allowed_roles=('admin',),
+    @cors_http('POST', '/api/v1/command/crontask/update_opta_rugby', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def crontask_update_opta_rugby(self, request):
         data = json.loads(request.get_data(as_text=True))
