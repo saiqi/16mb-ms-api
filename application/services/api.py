@@ -107,7 +107,7 @@ class ApiService(object):
             return Response(json.dumps(data), mimetype='application/json', status=201)
 
     @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
-    def opta_add_f1(self, request):
+    def opta_add_ru1(self, request):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -269,7 +269,7 @@ class ApiService(object):
 
     @cors_http('POST', '/api/v1/command/crontask/update_opta_rubgy', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
-    def crontask_update_opta_soccer(self, request):
+    def crontask_update_opta_rugby(self, request):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             try:
