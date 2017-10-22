@@ -106,7 +106,8 @@ class ApiService(object):
 
             return Response(json.dumps(data), mimetype='application/json', status=201)
 
-    @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
     def opta_add_ru1(self, request):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
@@ -220,12 +221,57 @@ class ApiService(object):
 
     @cors_http('GET', '/api/v1/query/metadata/query/<string:query_id>', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
-    def metadata_get_transformation(self, request, query_id):
+    def metadata_get_query(self, request, query_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 result = bson.json_util.loads(rpc.metadata.get_query(query_id))
             except:
                 raise BadRequest('An error occurred while retrieving query: {}'.format(query_id))
+
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('POST', '/api/v1/command/metadata/add_template', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
+    def metadata_add_template(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.metadata.add_template.call_async(**data)
+            except:
+                raise BadRequest('An error occurred while adding template')
+
+            return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
+
+    @cors_http('DELETE', '/api/v1/command/metadata/delete_template/<string:template_id>',
+               allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    def metadata_delete_query(self, request, template_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.metadata.delete_template.call_async(template_id)
+            except:
+                raise BadRequest('An error occurred while deleting template: {}'.format(template_id))
+
+            return Response(json.dumps({'id': template_id}), mimetype='application/json', status=204)
+
+    @cors_http('GET', '/api/v1/query/metadata/templates', allowed_roles=('admin', 'write', 'read',),
+               expected_exceptions=BadRequest)
+    def metatdata_get_all_templates(self, request):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = bson.json_util.loads(rpc.metadata.get_all_templates())
+            except:
+                raise BadRequest('An error occurred while retrieving all templates')
+
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('GET', '/api/v1/query/metadata/template/<string:template_id>', allowed_roles=('admin', 'write', 'read',),
+               expected_exceptions=BadRequest)
+    def metadata_get_template(self, request, template_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = bson.json_util.loads(rpc.metadata.get_template(template_id))
+            except:
+                raise BadRequest('An error occurred while retrieving template: {}'.format(template_id))
 
             return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
@@ -254,6 +300,63 @@ class ApiService(object):
                 raise BadRequest('An error occurred while executing query')
 
             return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('GET', '/api/v1/query/metadata/template/resolve/<string:template_id>',
+               allowed_roles=('admin', 'read', 'write'), expected_exceptions=BadRequest)
+    def metadata_resolve_template(self, request, template_id):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            template = bson.json_util.loads(rpc.metadata.get_template(template_id))
+
+            referential_search_doc = None
+            if 'referential_search_doc' in data:
+                referential_search_doc = data['referential_search_doc']
+
+            user_parameters = None
+            if 'user_parameters' in data:
+                user_parameters = data['user_parameters']
+
+            referential_results = dict()
+            if referential_search_doc is not None:
+                referential_results = bson.json_util.loads(rpc.referential.get_entity_or_event(referential_search_doc))
+
+            query_results = dict()
+
+            for q in template['queries']:
+                current_id = q['id']
+                current_query = bson.json_util.loads(rpc.metadata.get_query(q['id']))
+                query_results[current_id] = dict()
+                current_sql = current_query['sql']
+                parameters = list()
+                if current_query['parameters']:
+                    for p in current_query['parameters']:
+                        if current_id in user_parameters and p in user_parameters[current_id]:
+                            parameters.append(user_parameters[current_id][p])
+                        for ref in q['referential_parameters']:
+                            if p in ref:
+                                parameters.append(referential_results[ref[p]]['id'])
+                current_results = bson.json_util.loads(rpc.datareader.select(current_sql, parameters))
+                labelized_results = list()
+                for row in current_results:
+                    labelized_row = row.copy()
+                    if 'labels' in q and q['labels']:
+                        current_labels = q['labels']
+                        for lab in current_labels:
+                            if lab in row:
+                                if current_labels[lab] == 'entity':
+                                    current_entity = bson.json_util.loads(rpc.referential.get_entity_by_id(row[lab]))
+                                    labelized_row[lab] = current_entity['common_name']
+                                elif current_labels[lab] == 'label':
+                                    current_label = rpc.referential.get_labels_by_id_and_language(row[lab], 'FR')
+                                    labelized_row[lab] = current_label['label']
+                    labelized_results.append(labelized_row)
+
+                query_results[current_id] = labelized_results
+            results = {'referential': referential_results, 'query': query_results}
+            json_results = json.dumps(results, cls=DateEncoder)
+            infography = rpc.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
+
+            return Response(infography, mimetype='image/svg+xml')
 
     @cors_http('POST', '/api/v1/command/crontask/update_opta_soccer', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
