@@ -318,7 +318,11 @@ class ApiService(object):
 
             referential_results = dict()
             if referential_search_doc is not None:
-                referential_results = bson.json_util.loads(rpc.referential.get_entity_or_event(referential_search_doc))
+                try:
+                    referential_results = bson.json_util.loads(
+                        rpc.referential.get_entity_or_event(referential_search_doc))
+                except Exception as e:
+                    raise BadRequest(str(e))
 
             query_results = dict()
 
@@ -330,8 +334,9 @@ class ApiService(object):
                 parameters = list()
                 if current_query['parameters']:
                     for p in current_query['parameters']:
-                        if current_id in user_parameters and p in user_parameters[current_id]:
-                            parameters.append(user_parameters[current_id][p])
+                        if user_parameters is not None:
+                            if current_id in user_parameters and p in user_parameters[current_id]:
+                                parameters.append(user_parameters[current_id][p])
                         for ref in q['referential_parameters']:
                             if p in ref:
                                 parameters.append(referential_results[ref[p]]['id'])
