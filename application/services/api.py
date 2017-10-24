@@ -323,6 +323,12 @@ class ApiService(object):
                         rpc.referential.get_entity_or_event(referential_search_doc))
                 except Exception as e:
                     raise BadRequest(str(e))
+                for k in referential_search_doc:
+                    if 'picture' in referential_search_doc[k]:
+                        picture = rpc.referential.get_entity_picture(
+                            referential_results[k]['id'], referential_search_doc[k]['picture']['context'],
+                            referential_search_doc[k]['picture']['format'])
+                        referential_results[k]['picture'] = picture
 
             query_results = dict()
 
