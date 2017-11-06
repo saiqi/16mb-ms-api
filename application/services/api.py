@@ -275,6 +275,18 @@ class ApiService(object):
 
             return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
+    @cors_http('POST', '/api/v1/command/metadata/template/add_query/<string:template_id>',
+               allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
+    def metadata_add_query_to_template(self, request, template_id):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.metadata.add_query_to_template(template_id, **data)
+            except:
+                raise BadRequest('An error occurred while adding query to template {}'.format(template_id))
+
+            return Response(json.dumps({'id': template_id}), mimetype='application/json')
+
     @cors_http('GET', '/api/v1/query/metadata/query/resolve/<string:query_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=BadRequest)
     def metadata_resolve_query(self, request, query_id):
@@ -324,11 +336,12 @@ class ApiService(object):
                 except Exception as e:
                     raise BadRequest(str(e))
                 for k in referential_search_doc:
+                    picture = None
                     if 'picture' in referential_search_doc[k]:
                         picture = rpc.referential.get_entity_picture(
                             referential_results[k]['id'], referential_search_doc[k]['picture']['context'],
                             referential_search_doc[k]['picture']['format'])
-                        referential_results[k]['picture'] = picture
+                    referential_results[k]['picture'] = picture
 
             query_results = dict()
 
@@ -361,6 +374,21 @@ class ApiService(object):
                                     current_label = rpc.referential.get_labels_by_id_and_language(row[lab], 'FR')
                                     labelized_row[lab] = current_label['label']
                     labelized_results.append(labelized_row)
+                    if 'referential_results' in q and q['referential_results']:
+                        current_ref_config = q['referential_results']
+                        for cfg in current_ref_config:
+                            ref_pic = None
+                            if current_ref_config[cfg]['event_or_entity'] == 'event':
+                                current_ref_result = bson.json_util.loads(rpc.referential.get_event_by_id(row[cfg]))
+                            else:
+                                current_ref_result = bson.json_util.loads(rpc.referential.get_entity_by_id(row[cfg]))
+                                if 'picture' in current_ref_config[cfg]:
+                                    ref_pic = rpc.referential.get_entity_picture(
+                                        row[cfg], current_ref_config[cfg]['picture']['context'],
+                                        current_ref_config[cfg]['picture']['format'])
+                            current_column_id = current_ref_config[cfg]['column_id']
+                            referential_results[row[current_column_id]] = current_ref_result
+                            referential_results[row[current_column_id]]['picture'] = ref_pic
 
                 query_results[current_id] = labelized_results
             results = {'referential': referential_results, 'query': query_results}
