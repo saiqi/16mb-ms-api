@@ -244,7 +244,7 @@ class ApiService(object):
 
     @cors_http('DELETE', '/api/v1/command/metadata/delete_template/<string:template_id>',
                allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
-    def metadata_delete_query(self, request, template_id):
+    def metadata_delete_template(self, request, template_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.metadata.delete_template.call_async(template_id)
