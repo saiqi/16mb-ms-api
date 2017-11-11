@@ -285,7 +285,30 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while adding query to template {}'.format(template_id))
 
-            return Response(json.dumps({'id': template_id}), mimetype='application/json')
+            return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
+
+    @cors_http('DELETE', '/api/v1/command/metadata/template/delete_query/<string:template_id>/<string:query_id>',
+               allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
+    def metadata_delete_query_from_template(self, request, template_id, query_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.metadata.delete_query_from_template(template_id, query_id)
+            except:
+                raise BadRequest('An error occurred while deleting query from template {}'.format(template_id))
+
+            return Response(json.dumps({'id': template_id}), mimetype='application/json', status=204)
+
+    @cors_http('POST', '/api/v1/command/metadata/template/update_svg/<string:template_id>',
+               allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
+    def metadata_update_svg_in_template(self, request, template_id):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.metadata.update_svg_in_template(template_id, **data)
+            except:
+                raise BadRequest('An error occurred while updating svg in template {}'.format(template_id))
+
+            return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
 
     @cors_http('GET', '/api/v1/query/metadata/query/resolve/<string:query_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=BadRequest)
