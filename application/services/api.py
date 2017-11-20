@@ -451,7 +451,7 @@ class ApiService(object):
             method_name = request.args['method_name']
         tail = 10
         if 'tail' in request.args:
-            tail = request.args['tail']
+            tail = int(request.args['tail'])
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 raw_logs = bson.json_util.loads(rpc.crontask.get_logs(tail=tail, method_name=method_name))
