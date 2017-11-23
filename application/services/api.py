@@ -343,6 +343,12 @@ class ApiService(object):
         with ClusterRpcProxy(self.config) as rpc:
             template = bson.json_util.loads(rpc.metadata.get_template(template_id))
 
+            context = template['context']
+
+            language = template['language']
+            if 'language' in data:
+                language = data['language']
+
             referential_search_doc = None
             if 'referential_search_doc' in data:
                 referential_search_doc = data['referential_search_doc']
@@ -394,7 +400,7 @@ class ApiService(object):
                                     current_entity = bson.json_util.loads(rpc.referential.get_entity_by_id(row[lab]))
                                     labelized_row[lab] = current_entity['common_name']
                                 elif current_labels[lab] == 'label':
-                                    current_label = rpc.referential.get_labels_by_id_and_language(row[lab], 'FR')
+                                    current_label = rpc.referential.get_labels_by_id_and_language_and_context(row[lab], language, context)
                                     labelized_row[lab] = current_label['label']
                     labelized_results.append(labelized_row)
                     if 'referential_results' in q and q['referential_results']:
