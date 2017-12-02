@@ -371,6 +371,12 @@ class ApiService(object):
                             referential_results[k]['id'], referential_search_doc[k]['picture']['context'],
                             referential_search_doc[k]['picture']['format'])
                     referential_results[k]['picture'] = picture
+                    logo = None
+                    if 'logo' in referential_search_doc[k]:
+                        logo = rpc.referential.get_entity_logo(
+                            referential_results[k]['id'], referential_search_doc[k]['picture']['context'],
+                            referential_search_doc[k]['picture']['format'])
+                    referential_results[k]['logo'] = logo
 
             query_results = dict()
 
@@ -413,6 +419,10 @@ class ApiService(object):
                                 current_ref_result = bson.json_util.loads(rpc.referential.get_entity_by_id(row[cfg]))
                                 if 'picture' in current_ref_config[cfg]:
                                     ref_pic = rpc.referential.get_entity_picture(
+                                        row[cfg], current_ref_config[cfg]['picture']['context'],
+                                        current_ref_config[cfg]['picture']['format'])
+                                if 'logo' in current_ref_config[cfg]:
+                                    ref_logo = rpc.referential.get_entity_logo(
                                         row[cfg], current_ref_config[cfg]['picture']['context'],
                                         current_ref_config[cfg]['picture']['format'])
                             current_column_id = current_ref_config[cfg]['column_id']
