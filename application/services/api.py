@@ -413,6 +413,7 @@ class ApiService(object):
                         current_ref_config = q['referential_results']
                         for cfg in current_ref_config:
                             ref_pic = None
+                            ref_logo = None
                             if current_ref_config[cfg]['event_or_entity'] == 'event':
                                 current_ref_result = bson.json_util.loads(rpc.referential.get_event_by_id(row[cfg]))
                             else:
@@ -428,6 +429,7 @@ class ApiService(object):
                             current_column_id = current_ref_config[cfg]['column_id']
                             referential_results[row[current_column_id]] = current_ref_result
                             referential_results[row[current_column_id]]['picture'] = ref_pic
+                            referential_results[row[current_column_id]]['logo'] = ref_logo
 
                 query_results[current_id] = labelized_results
             results = {'referential': referential_results, 'query': query_results}
