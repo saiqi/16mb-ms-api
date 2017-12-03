@@ -349,6 +349,10 @@ class ApiService(object):
             if 'language' in data:
                 language = data['language']
 
+            json_only = False
+            if 'json_only' in data:
+                json_only = data['json_only']
+
             referential_search_doc = None
             if 'referential_search_doc' in data:
                 referential_search_doc = data['referential_search_doc']
@@ -434,9 +438,12 @@ class ApiService(object):
                 query_results[current_id] = labelized_results
             results = {'referential': referential_results, 'query': query_results}
             json_results = json.dumps(results, cls=DateEncoder)
-            infography = rpc.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
 
-            return Response(infography, mimetype='image/svg+xml')
+            if json_only is True:
+                return Response(json_results, mimetype='application/json')
+            else:
+                infography = rpc.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
+                return Response(infography, mimetype='image/svg+xml')
 
     @cors_http('POST', '/api/v1/command/crontask/update_opta_soccer', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
