@@ -395,9 +395,10 @@ class ApiService(object):
                         if user_parameters is not None:
                             if current_id in user_parameters and p in user_parameters[current_id]:
                                 parameters.append(user_parameters[current_id][p])
-                        for ref in q['referential_parameters']:
-                            if p in ref:
-                                parameters.append(referential_results[ref[p]]['id'])
+                        if 'referential_parameters' in q and q['referential_parameters']:
+                            for ref in q['referential_parameters']:
+                                if p in ref:
+                                    parameters.append(referential_results[ref[p]]['id'])
                 current_results = bson.json_util.loads(rpc.datareader.select(current_sql, parameters))
                 labelized_results = list()
                 for row in current_results:
