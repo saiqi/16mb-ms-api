@@ -497,3 +497,37 @@ class ApiService(object):
                 raise BadRequest('An error occurred while getting result from datareader')
 
             return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('POST', '/api/v1/command/referential/add_label', allowed_roles=('admin', 'write'),
+               expected_exceptions=BadRequest)
+    def referential_add_label(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.referential.add_label.call_async(**data)
+            except:
+                raise BadRequest('An error occured while adding label')
+
+            return Response(json.dumps(data), mimetype='application/json', status=201)
+
+    @cors_http('DELETE', '/api/v1/command/referential/delete_label/<string:label_id>/<string:language>/<string:context>',
+               allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
+    def referential_delete_label(self, request, label_id, language, context):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.referential.delete_label(label_id, language, context)
+            except:
+                raise BadRequest('An error occured while deleting label')
+
+            return Response(json.dumps({'id': label_id}), mimetype='application/json', status=204)
+
+    @cors_http('GET', '/api/v1/query/referential/get_label/<string:label_id>/<string:language>/<string:context>',
+               allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    def referential_get_label(self, request, label_id, language, context):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                label = rpc.referential.get_labels_by_id_and_language_and_context(label_id, language, context)
+            except:
+                raise BadRequest('An error occured while getting label')
+
+            return Response(json.dumps(label), mimetype='application/json')
