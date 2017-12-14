@@ -498,6 +498,19 @@ class ApiService(object):
 
             return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
+    @cors_http('POST', '/api/v1/command/datastore/create_table', allowed_roles=('admin',),
+               expected_exceptions=BadRequest)
+    def datastore_create_table(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.datastore.upsert.call_async(**data)
+            except:
+                raise BadRequest('An error occured while creating table')
+
+            return Response(json.dumps('target_table': data['target_table']), mimetype='application/json',
+                            status=201)
+
     @cors_http('POST', '/api/v1/command/referential/add_label', allowed_roles=('admin', 'write'),
                expected_exceptions=BadRequest)
     def referential_add_label(self, request):
