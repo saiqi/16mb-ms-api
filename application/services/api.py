@@ -508,7 +508,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while creating table')
 
-            return Response(json.dumps('target_table': data['target_table']), mimetype='application/json',
+            return Response(json.dumps({'target_table': data['target_table']}), mimetype='application/json',
                             status=201)
 
     @cors_http('POST', '/api/v1/command/referential/add_label', allowed_roles=('admin', 'write'),
