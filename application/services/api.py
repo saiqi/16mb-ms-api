@@ -504,6 +504,7 @@ class ApiService(object):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             try:
+                rpc.datastore.truncate(data['target_table'])
                 rpc.datastore.upsert.call_async(**data)
             except:
                 raise BadRequest('An error occured while creating table')
