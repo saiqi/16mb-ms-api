@@ -545,3 +545,27 @@ class ApiService(object):
                 raise BadRequest('An error occured while getting label')
 
             return Response(json.dumps(label), mimetype='application/json')
+
+    @cors_http('GET', '/api/v1/query/referential/search_entity', allowed_roles=('admin', 'write', 'read',),
+               expected_exceptions=BadRequest)
+    def referential_search_entity(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                entities = bson.json_util.loads(rpc.referential.search_entity(**data))
+            except:
+                raise BadRequest('An error occured while searching entity')
+
+            return Response(json.dumps(entities, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('GET', '/api/v1/query/referential/search_event', allowed_roles=('admin', 'write', 'read',),
+               expected_exceptions=BadRequest)
+    def referential_search_event(self, request):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                events = bson.json_util.loads(rpc.referential.search_event(**data))
+            except:
+                raise BadRequest('An error occured while searching entity')
+
+            return Response(json.dumps(events, cls=DateEncoder), mimetype='application/json')
