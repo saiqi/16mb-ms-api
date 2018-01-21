@@ -446,6 +446,118 @@ class ApiService(object):
                 infography = rpc.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
                 return Response(infography, mimetype='image/svg+xml')
 
+    @cors_http('GET', '/api/v2/query/metadata/template/resolve/<string:template_id>',
+               allowed_roles=('admin', 'read', 'write'), expected_exceptions=BadRequest)
+    def metadata_resolve_template_with_ids(self, request, template_id):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            template = bson.json_util.loads(rpc.metadata.get_template(template_id))
+
+            context = template['context']
+
+            language = template['language']
+            if 'language' in data:
+                language = data['language']
+
+            json_only = False
+            if 'json_only' in data:
+                json_only = data['json_only']
+
+            referential = None
+            if 'referential' in data:
+                referential = data['referential']
+
+            user_parameters = None
+            if 'user_parameters' in data:
+                user_parameters = data['user_parameters']
+
+            referential_results = dict()
+            if referential is not None:
+                try:
+                    for k,v in referential.items():
+                        current_ref_str = None
+                        if v['event_or_entity'] == 'entity':
+                            current_ref_str = rpc.referential.get_entity_by_id(v['id'])
+                        else:
+                            current_ref_str = rpc.referential.get_event_by_id(v['id'])
+                        referential_results[k] = bson.json_util.loads(current_ref_str)
+                        picture = None
+                        if 'picture' in v:
+                            picture = rpc.referential.get_entity_picture(v['id'], v['picture']['context'],
+                                                                         v['picture']['format'])
+                        referential_results[k]['picture'] = picture
+                        logo = None
+                        if 'logo' in v:
+                            logo = rpc.referential.get_entity_logo(v['id'], v['logo']['context'],
+                                                                   v['logo']['format'])
+                        referential_results[k]['logo'] = logo
+                except Exception as e:
+                    raise BadRequest(str(e))
+
+            query_results = dict()
+
+            for q in template['queries']:
+                current_id = q['id']
+                current_query = bson.json_util.loads(rpc.metadata.get_query(q['id']))
+                query_results[current_id] = dict()
+                current_sql = current_query['sql']
+                parameters = list()
+                if current_query['parameters']:
+                    for p in current_query['parameters']:
+                        if user_parameters is not None:
+                            if current_id in user_parameters and p in user_parameters[current_id]:
+                                parameters.append(user_parameters[current_id][p])
+                        if 'referential_parameters' in q and q['referential_parameters']:
+                            for ref in q['referential_parameters']:
+                                if p in ref:
+                                    parameters.append(referential_results[ref[p]['name']]['id'])
+                current_results = bson.json_util.loads(rpc.datareader.select(current_sql, parameters))
+                labelized_results = list()
+                for row in current_results:
+                    labelized_row = row.copy()
+                    if 'labels' in q and q['labels']:
+                        current_labels = q['labels']
+                        for lab in current_labels:
+                            if lab in row:
+                                if current_labels[lab] == 'entity':
+                                    current_entity = bson.json_util.loads(rpc.referential.get_entity_by_id(row[lab]))
+                                    labelized_row[lab] = current_entity['common_name']
+                                elif current_labels[lab] == 'label':
+                                    current_label = rpc.referential.get_labels_by_id_and_language_and_context(row[lab], language, context)
+                                    labelized_row[lab] = current_label['label']
+                    labelized_results.append(labelized_row)
+                    if 'referential_results' in q and q['referential_results']:
+                        current_ref_config = q['referential_results']
+                        for cfg in current_ref_config:
+                            ref_pic = None
+                            ref_logo = None
+                            if current_ref_config[cfg]['event_or_entity'] == 'event':
+                                current_ref_result = bson.json_util.loads(rpc.referential.get_event_by_id(row[cfg]))
+                            else:
+                                current_ref_result = bson.json_util.loads(rpc.referential.get_entity_by_id(row[cfg]))
+                                if 'picture' in current_ref_config[cfg]:
+                                    ref_pic = rpc.referential.get_entity_picture(
+                                        row[cfg], current_ref_config[cfg]['picture']['context'],
+                                        current_ref_config[cfg]['picture']['format'])
+                                if 'logo' in current_ref_config[cfg]:
+                                    ref_logo = rpc.referential.get_entity_logo(
+                                        row[cfg], current_ref_config[cfg]['logo']['context'],
+                                        current_ref_config[cfg]['logo']['format'])
+                            current_column_id = current_ref_config[cfg]['column_id']
+                            referential_results[row[current_column_id]] = current_ref_result
+                            referential_results[row[current_column_id]]['picture'] = ref_pic
+                            referential_results[row[current_column_id]]['logo'] = ref_logo
+
+                query_results[current_id] = labelized_results
+            results = {'referential': referential_results, 'query': query_results}
+            json_results = json.dumps(results, cls=DateEncoder)
+
+            if json_only is True:
+                return Response(json_results, mimetype='application/json')
+            else:
+                infography = rpc.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
+                return Response(infography, mimetype='image/svg+xml')
+
     @cors_http('POST', '/api/v1/command/crontask/update_opta_soccer', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def crontask_update_opta_soccer(self, request):
