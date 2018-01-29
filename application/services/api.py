@@ -106,6 +106,28 @@ class ApiService(object):
 
             return Response(json.dumps(data), mimetype='application/json', status=201)
 
+    @cors_http('GET', '/api/v1/query/opta/f9/<string:game_id>', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
+    def opta_get_f9(self, request, game_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = bson.json_util.loads(rpc.opta_collector.get_f9(game_id))
+            except:
+                raise BadRequest('An error occured while getting Opta F9 file')
+
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('GET', '/api/v1/query/opta/soccer_ids/<string:start>/<string:end>', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
+    def get_opta_soccer_ids(self, request, start, end):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = rpc.opta_collector.get_soccer_ids_by_dates(start, end)
+            except:
+                raise BadRequest('An error occured while getting Opta soccer game ids')
+
+            return Response(json.dumps(result), mimetype='application/json')
+
     @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
     def opta_add_ru1(self, request):
@@ -117,6 +139,28 @@ class ApiService(object):
                 raise BadRequest('An error occurred while adding Opta RU1 file')
 
             return Response(json.dumps(data), mimetype='application/json', status=201)
+
+    @cors_http('GET', '/api/v1/query/opta/ru7/<string:game_id>', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
+    def opta_get_ru7(self, request, game_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = bson.json_util.loads(rpc.opta_collector.get_ru7(game_id))
+            except:
+                raise BadRequest('An error occured while getting Opta RU7 file')
+
+            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('GET', '/api/v1/query/opta/rugby_ids/<string:start>/<string:end>', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
+    def get_opta_rugby_ids(self, request, start, end):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = rpc.opta_collector.get_rugby_ids_by_dates(start, end)
+            except:
+                raise BadRequest('An error occured while getting Opta rugby game ids')
+
+            return Response(json.dumps(result), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/metadata/add_transformation', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
