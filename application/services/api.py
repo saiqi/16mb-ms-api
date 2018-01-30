@@ -128,6 +128,27 @@ class ApiService(object):
 
             return Response(json.dumps(result), mimetype='application/json')
 
+    @cors_http('PUT', '/api/v1/command/opta/ack_f9/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
+    def opta_ack_f9(self, request, game_id):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = rpc.opta_collector.ack_f9(game_id, data['checksum'])
+            except:
+                raise BadRequest('An error occured while acknowledging Opta F9')
+
+            return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
+
+    @cors_http('PUT', '/api/v1/command/opta/unack_f9/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
+    def opta_unack_f9(self, request, game_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = rpc.opta_collector.unack_f9(game_id)
+            except:
+                raise BadRequest('An error occured while unacknowledging Opta F9')
+
+            return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
+
     @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
     def opta_add_ru1(self, request):
@@ -161,6 +182,27 @@ class ApiService(object):
                 raise BadRequest('An error occured while getting Opta rugby game ids')
 
             return Response(json.dumps(result), mimetype='application/json')
+
+    @cors_http('PUT', '/api/v1/command/opta/ack_ru7/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
+    def opta_ack_ru7(self, request, game_id):
+        data = json.loads(request.get_data(as_text=True))
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = rpc.opta_collector.ack_ru7(game_id, data['checksum'])
+            except:
+                raise BadRequest('An error occured while acknowledging Opta RU7')
+
+            return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
+
+    @cors_http('PUT', '/api/v1/command/opta/unack_ru7/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
+    def opta_unack_ru7(self, request, game_id):
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                result = rpc.opta_collector.unack_ru7(game_id)
+            except:
+                raise BadRequest('An error occured while unacknowledging Opta RU7')
+
+            return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
 
     @cors_http('POST', '/api/v1/command/metadata/add_transformation', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
