@@ -710,6 +710,46 @@ class ApiService(object):
             return Response(json.dumps({'target_table': data['target_table']}), mimetype='application/json',
                             status=201)
 
+    @cors_http('POST', '/api/v1/command/datastore/write', allowed_roles=('admin'),
+               expected_exceptions=BadRequest)
+    def datastore_write(self, request):
+        data = json.loads(request.get_data(as_text=True))
+
+        if 'write_policy' not in data:
+            raise BadRequest('Missing write_policy paramerter in posted data')
+
+        write_policy = data['write_policy']
+
+        if write_policy not in ('insert', 'upsert', 'bulk_insert', 'delete_insert', 'delete_bulk_insert',
+                                'truncate_insert', 'truncate_bulk_insert'):
+            raise BadRequest('Wrong value for parameter write_policy')
+
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                if write_policy == 'insert':
+                    rpc.datastore.insert(data['target_table'], data['records'], data['meta'])
+                elif write_policy == 'upsert':
+                    rpc.datastore.upsert(data['target_table'], data['upsert_key'], data['records'], data['meta'])
+                elif write_policy == 'bulk_insert':
+                    rpc.datastore.bulk_insert(data['target_table'], data['records'], data['meta'])
+                elif write_policy == 'delete_insert':
+                    rpc.datastore.delete(data['target_table'], data['delete_keys'])
+                    rpc.datastore.insert(data['target_table'], data['records'], data['meta'])
+                elif write_policy == 'delete_bulk_insert':
+                    rpc.datastore.delete(data['target_table'], data['delete_keys'])
+                    rpc.datastore.bulk_insert(data['target_table'], data['records'], data['meta'])
+                elif write_policy == 'truncate_insert':
+                    rpc.datastore.truncate(data['target_table'])
+                    rpc.datastore.insert(data['target_table'], data['records'], data['meta'])
+                else:
+                    rpc.datastore.truncate(data['target_table'])
+                    rpc.datastore.bulk_insert(data['target_table'], data['records'], data['meta'])
+            except:
+                raise BadRequest('An error occured while writing in datastore')
+
+        return Response(json.dumps({'target_table': data['target_table']}), mimetype='application/json',
+                        status=201)
+
     @cors_http('POST', '/api/v1/command/referential/add_label', allowed_roles=('admin', 'write'),
                expected_exceptions=BadRequest)
     def referential_add_label(self, request):
