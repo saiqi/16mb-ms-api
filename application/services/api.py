@@ -758,7 +758,7 @@ class ApiService(object):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                rpc.referential.add_label.call_async(**data)
+                rpc.referential.add_label(**data)
             except:
                 raise BadRequest('An error occured while adding label')
 
