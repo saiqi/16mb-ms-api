@@ -2,11 +2,12 @@ import json
 import datetime
 from functools import partial
 
+from nameko.exceptions import serialize
 from nameko.web.handlers import HttpRequestHandler
 from nameko.standalone.rpc import ClusterRpcProxy
 from nameko.dependency_providers import Config
 from nameko.extensions import register_entrypoint
-from werkzeug.exceptions import BadRequest, Unauthorized, Forbidden
+from werkzeug.exceptions import BadRequest, Unauthorized, Forbidden, NotFound
 from werkzeug import Response
 
 import jwt
@@ -34,6 +35,20 @@ class CorsHttpRequestHandler(HttpRequestHandler):
         response.headers.add("Access-Control-Allow-Methods", ",".join(self.allowed_methods))
         response.headers.add("Access-Control-Allow-Origin", ",".join(self.allowed_origin))
         return response
+
+    def response_from_exception(self, exc):
+        if isinstance(exc, self.expected_exceptions):
+            if isinstance(exc, NotFound):
+                status_code = 404
+            else:
+                status_code = 400
+        else:
+            status_code = 500
+
+        error_dict = serialize(exc)
+        payload = u'Error: {exc_type}: {value}\n'.format(**error_dict)
+
+        return Response(payload, status=status_code)
 
     @classmethod
     def decorator(cls, *args, **kwargs):
@@ -104,10 +119,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while adding Opta F1 file')
 
-            return Response(json.dumps(data), mimetype='application/json', status=201)
+        return Response(json.dumps(data), mimetype='application/json', status=201)
 
     @cors_http('GET', '/api/v1/query/opta/f9/<string:game_id>', allowed_roles=('admin', 'write',),
-               expected_exceptions=BadRequest)
+               expected_exceptions=(BadRequest, NotFound))
     def opta_get_f9(self, request, game_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -115,7 +130,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while getting Opta F9 file')
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+            if result is None:
+                raise NotFound('Opta F9 file not found')
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('GET', '/api/v1/query/opta/soccer_ids/<string:start>/<string:end>', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
@@ -126,7 +144,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while getting Opta soccer game ids')
 
-            return Response(json.dumps(result), mimetype='application/json')
+        return Response(json.dumps(result), mimetype='application/json')
 
     @cors_http('PUT', '/api/v1/command/opta/ack_f9/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
     def opta_ack_f9(self, request, game_id):
@@ -137,7 +155,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while acknowledging Opta F9')
 
-            return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
+        return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
 
     @cors_http('PUT', '/api/v1/command/opta/unack_f9/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
     def opta_unack_f9(self, request, game_id):
@@ -147,7 +165,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while unacknowledging Opta F9')
 
-            return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
+        return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
 
     @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
@@ -159,10 +177,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while adding Opta RU1 file')
 
-            return Response(json.dumps(data), mimetype='application/json', status=201)
+        return Response(json.dumps(data), mimetype='application/json', status=201)
 
     @cors_http('GET', '/api/v1/query/opta/ru7/<string:game_id>', allowed_roles=('admin', 'write',),
-               expected_exceptions=BadRequest)
+               expected_exceptions=(BadRequest, NotFound))
     def opta_get_ru7(self, request, game_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -170,7 +188,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while getting Opta RU7 file')
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+            if result is None:
+                raise NotFound('Opta RU7 file not found')
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('GET', '/api/v1/query/opta/rugby_ids/<string:start>/<string:end>', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
@@ -181,7 +202,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while getting Opta rugby game ids')
 
-            return Response(json.dumps(result), mimetype='application/json')
+        return Response(json.dumps(result), mimetype='application/json')
 
     @cors_http('PUT', '/api/v1/command/opta/ack_ru7/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
     def opta_ack_ru7(self, request, game_id):
@@ -192,7 +213,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while acknowledging Opta RU7')
 
-            return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
+        return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
 
     @cors_http('PUT', '/api/v1/command/opta/unack_ru7/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
     def opta_unack_ru7(self, request, game_id):
@@ -202,7 +223,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while unacknowledging Opta RU7')
 
-            return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
+        return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
 
     @cors_http('POST', '/api/v1/command/metadata/add_transformation', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
@@ -210,22 +231,22 @@ class ApiService(object):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                rpc.metadata.add_transformation.call_async(**data)
+                rpc.metadata.add_transformation(**data)
             except:
                 raise BadRequest('An error occurred while adding transformation')
 
-            return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
+        return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
 
     @cors_http('DELETE', '/api/v1/command/metadata/delete_transformation/<string:transformation_id>',
                allowed_roles=('admin',), expected_exceptions=BadRequest)
     def metadata_delete_transformation(self, request, transformation_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                rpc.metadata.delete_transformation.call_async(transformation_id)
+                rpc.metadata.delete_transformation(transformation_id)
             except:
                 raise BadRequest('An error occurred while deleting transformation: {}'.format(transformation_id))
 
-            return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=204)
+        return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=204)
 
     @cors_http('POST', '/api/v1/command/metadata/deploy_function/<string:transformation_id>', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
@@ -247,7 +268,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while creating python function')
 
-            return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=201)
+        return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=201)
 
     @cors_http('GET', '/api/v1/query/metadata/transformations', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
@@ -258,10 +279,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while retrieving all transformations')
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('GET', '/api/v1/query/metadata/transformation/<string:transformation_id>', allowed_roles=('admin',),
-               expected_exceptions=BadRequest)
+               expected_exceptions=(BadRequest, NotFound))
     def metadata_get_transformation(self, request, transformation_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -269,7 +290,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while retrieving transformation: {}'.format(transformation_id))
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+            if result is None:
+                raise NotFound('Transformation not found')
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/metadata/add_query', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
@@ -277,22 +301,22 @@ class ApiService(object):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                rpc.metadata.add_query.call_async(**data)
+                rpc.metadata.add_query(**data)
             except:
                 raise BadRequest('An error occurred while adding query')
 
-            return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
+        return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
 
     @cors_http('DELETE', '/api/v1/command/metadata/delete_query/<string:query_id>',
                allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
     def metadata_delete_query(self, request, query_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                rpc.metadata.delete_query.call_async(query_id)
+                rpc.metadata.delete_query(query_id)
             except:
                 raise BadRequest('An error occurred while deleting query: {}'.format(query_id))
 
-            return Response(json.dumps({'id': query_id}), mimetype='application/json', status=204)
+        return Response(json.dumps({'id': query_id}), mimetype='application/json', status=204)
 
     @cors_http('GET', '/api/v1/query/metadata/queries', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
@@ -303,10 +327,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while retrieving all queries')
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('GET', '/api/v1/query/metadata/query/<string:query_id>', allowed_roles=('admin', 'write', 'read',),
-               expected_exceptions=BadRequest)
+               expected_exceptions=(BadRequest, NotFound))
     def metadata_get_query(self, request, query_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -314,7 +338,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while retrieving query: {}'.format(query_id))
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+            if result is None:
+                raise NotFound('Query not found')
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/metadata/add_template', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
@@ -322,22 +349,22 @@ class ApiService(object):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                rpc.metadata.add_template.call_async(**data)
+                rpc.metadata.add_template(**data)
             except:
                 raise BadRequest('An error occurred while adding template')
 
-            return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
+        return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
 
     @cors_http('DELETE', '/api/v1/command/metadata/delete_template/<string:template_id>',
                allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
     def metadata_delete_template(self, request, template_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                rpc.metadata.delete_template.call_async(template_id)
+                rpc.metadata.delete_template(template_id)
             except:
                 raise BadRequest('An error occurred while deleting template: {}'.format(template_id))
 
-            return Response(json.dumps({'id': template_id}), mimetype='application/json', status=204)
+        return Response(json.dumps({'id': template_id}), mimetype='application/json', status=204)
 
     @cors_http('GET', '/api/v1/query/metadata/templates', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
@@ -348,10 +375,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while retrieving all templates')
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('GET', '/api/v1/query/metadata/template/<string:template_id>', allowed_roles=('admin', 'write', 'read',),
-               expected_exceptions=BadRequest)
+               expected_exceptions=(BadRequest, NotFound))
     def metadata_get_template(self, request, template_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -359,7 +386,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while retrieving template: {}'.format(template_id))
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+            if result is None:
+                raise NotFound('Template not found')
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/metadata/template/add_query/<string:template_id>',
                allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
@@ -371,7 +401,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while adding query to template {}'.format(template_id))
 
-            return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
+        return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
 
     @cors_http('DELETE', '/api/v1/command/metadata/template/delete_query/<string:template_id>/<string:query_id>',
                allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
@@ -382,7 +412,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while deleting query from template {}'.format(template_id))
 
-            return Response(json.dumps({'id': template_id}), mimetype='application/json', status=204)
+        return Response(json.dumps({'id': template_id}), mimetype='application/json', status=204)
 
     @cors_http('POST', '/api/v1/command/metadata/template/update_svg/<string:template_id>',
                allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
@@ -394,23 +424,23 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while updating svg in template {}'.format(template_id))
 
-            return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
+        return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
 
     @cors_http('GET', '/api/v1/query/metadata/query/resolve/<string:query_id>',
-               allowed_roles=('admin', 'read', 'write'), expected_exceptions=BadRequest)
+               allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_query(self, request, query_id):
-        args = request.args
+        data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             query = bson.json_util.loads(rpc.metadata.get_query(query_id))
 
             if query is None:
-                raise BadRequest('Can not find query with id: {}'.format(query_id))
+                raise NotFound('Query not found')
 
             params = None
             if query['parameters'] is not None:
-                if sorted(query['parameters']) != sorted(args.keys()):
+                if sorted(query['parameters']) != sorted(data.keys()):
                     raise BadRequest('Request arguments are mismatching expected query parameters')
-                params = [args[p] for p in query['parameters']]
+                params = [data[p] for p in query['parameters']]
 
             try:
                 if params is not None:
@@ -420,14 +450,17 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while executing query')
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('GET', '/api/v1/query/metadata/template/resolve/<string:template_id>',
-               allowed_roles=('admin', 'read', 'write'), expected_exceptions=BadRequest)
+               allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template(self, request, template_id):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             template = bson.json_util.loads(rpc.metadata.get_template(template_id))
+
+            if template is None:
+                raise NotFound('Template not found')
 
             context = template['context']
 
@@ -531,18 +564,23 @@ class ApiService(object):
             results = {'referential': referential_results, 'query': query_results}
             json_results = json.dumps(results, cls=DateEncoder)
 
-            if json_only is True:
-                return Response(json_results, mimetype='application/json')
-            else:
+            if not json_only:
                 infography = rpc.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
-                return Response(infography, mimetype='image/svg+xml')
+
+        if json_only is True:
+            return Response(json_results, mimetype='application/json')
+
+        return Response(infography, mimetype='image/svg+xml')
 
     @cors_http('GET', '/api/v2/query/metadata/template/resolve/<string:template_id>',
-               allowed_roles=('admin', 'read', 'write'), expected_exceptions=BadRequest)
+               allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template_with_ids(self, request, template_id):
         data = json.loads(request.get_data(as_text=True))
         with ClusterRpcProxy(self.config) as rpc:
             template = bson.json_util.loads(rpc.metadata.get_template(template_id))
+
+            if template is None:
+                raise NotFound('Template not found')
 
             context = template['context']
 
@@ -602,7 +640,10 @@ class ApiService(object):
                             for ref in q['referential_parameters']:
                                 if p in ref:
                                     parameters.append(referential_results[ref[p]['name']]['id'])
-                current_results = bson.json_util.loads(rpc.datareader.select(current_sql, parameters))
+                try:
+                    current_results = bson.json_util.loads(rpc.datareader.select(current_sql, parameters))
+                except:
+                    raise BadRequest('An error occured while executing query {}'.format(current_id))
                 labelized_results = list()
                 for row in current_results:
                     labelized_row = row.copy()
@@ -615,6 +656,8 @@ class ApiService(object):
                                     labelized_row[lab] = current_entity['common_name']
                                 elif current_labels[lab] == 'label':
                                     current_label = rpc.referential.get_labels_by_id_and_language_and_context(row[lab], language, context)
+                                    if current_label is None:
+                                        raise BadRequest('Label {} not found'.format(row[lab]))
                                     labelized_row[lab] = current_label['label']
                     labelized_results.append(labelized_row)
                     if 'referential_results' in q and q['referential_results']:
@@ -643,11 +686,13 @@ class ApiService(object):
             results = {'referential': referential_results, 'query': query_results}
             json_results = json.dumps(results, cls=DateEncoder)
 
-            if json_only is True:
-                return Response(json_results, mimetype='application/json')
-            else:
+            if not json_only:
                 infography = rpc.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
-                return Response(infography, mimetype='image/svg+xml')
+
+        if json_only is True:
+            return Response(json_results, mimetype='application/json')
+
+        return Response(infography, mimetype='image/svg+xml')
 
     @cors_http('POST', '/api/v1/command/crontask/update_opta_soccer', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
@@ -659,7 +704,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while submitting update opta soccer task')
 
-            return Response(json.dumps(data), mimetype='application/json', status=201)
+        return Response(json.dumps(data), mimetype='application/json', status=201)
 
     @cors_http('POST', '/api/v1/command/crontask/update_opta_rugby', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
@@ -671,7 +716,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while submitting update opta rugby task')
 
-            return Response(json.dumps(data), mimetype='application/json', status=201)
+        return Response(json.dumps(data), mimetype='application/json', status=201)
 
     @cors_http('GET', '/api/v1/query/crontask/logs', allowed_roles=('admin',), expected_exceptions=BadRequest)
     def crontask_get_logs(self, request):
@@ -687,7 +732,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while retrieving crontask logs')
 
-            return Response(json.dumps(raw_logs, cls=DateEncoder), mimetype='application/json')
+        return Response(json.dumps(raw_logs, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('GET', '/api/v1/query/datareader/select', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
@@ -699,7 +744,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occurred while getting result from datareader')
 
-            return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/datastore/create_table', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
@@ -708,12 +753,11 @@ class ApiService(object):
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.datastore.truncate(data['target_table'])
-                rpc.datastore.upsert.call_async(**data)
+                rpc.datastore.insert(**data)
             except:
                 raise BadRequest('An error occured while creating table')
 
-            return Response(json.dumps({'target_table': data['target_table']}), mimetype='application/json',
-                            status=201)
+        return Response(json.dumps({'target_table': data['target_table']}), mimetype='application/json', status=201)
 
     @cors_http('POST', '/api/v1/command/datastore/write', allowed_roles=('admin'),
                expected_exceptions=BadRequest)
@@ -765,7 +809,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while adding label')
 
-            return Response(json.dumps(data), mimetype='application/json', status=201)
+        return Response(json.dumps(data), mimetype='application/json', status=201)
 
     @cors_http('DELETE', '/api/v1/command/referential/delete_label/<string:label_id>/<string:language>/<string:context>',
                allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
@@ -776,10 +820,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while deleting label')
 
-            return Response(json.dumps({'id': label_id}), mimetype='application/json', status=204)
+        return Response(json.dumps({'id': label_id}), mimetype='application/json', status=204)
 
     @cors_http('GET', '/api/v1/query/referential/get_label/<string:label_id>/<string:language>/<string:context>',
-               allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+               allowed_roles=('admin', 'write',), expected_exceptions=(BadRequest, NotFound))
     def referential_get_label(self, request, label_id, language, context):
         with ClusterRpcProxy(self.config) as rpc:
             try:
@@ -787,7 +831,10 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while getting label')
 
-            return Response(json.dumps(label), mimetype='application/json')
+            if label is None:
+                raise NotFound('Label not found')
+
+        return Response(json.dumps(label), mimetype='application/json')
 
     @cors_http('GET', '/api/v1/query/referential/search_entity', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
@@ -799,7 +846,7 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while searching entity')
 
-            return Response(json.dumps(entities, cls=DateEncoder), mimetype='application/json')
+        return Response(json.dumps(entities, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('GET', '/api/v1/query/referential/search_event', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
@@ -811,4 +858,4 @@ class ApiService(object):
             except:
                 raise BadRequest('An error occured while searching entity')
 
-            return Response(json.dumps(events, cls=DateEncoder), mimetype='application/json')
+        return Response(json.dumps(events, cls=DateEncoder), mimetype='application/json')
