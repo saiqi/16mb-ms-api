@@ -533,6 +533,8 @@ class ApiService(object):
                     current_results = bson.json_util.loads(rpc.datareader.select(current_sql, parameters))
                 except:
                     raise BadRequest('An error occured while executing query {}'.format(current_id))
+                if current_results is None:
+                    raise BadRequest('Query {} returns nothing'.format(current_id))
                 labelized_results = list()
                 for row in current_results:
                     labelized_row = row.copy()
@@ -655,6 +657,8 @@ class ApiService(object):
                     current_results = bson.json_util.loads(rpc.datareader.select(current_sql, parameters))
                 except:
                     raise BadRequest('An error occured while executing query {}'.format(current_id))
+                if current_results is None:
+                    raise BadRequest('Query {} returns nothing'.format(current_id))
                 labelized_results = list()
                 for row in current_results:
                     labelized_row = row.copy()
