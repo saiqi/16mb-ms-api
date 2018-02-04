@@ -110,12 +110,23 @@ class ApiService(object):
 
     config = Config()
 
+    def _handle_request_data(self, request):
+        if not request.get_data():
+            raise BadRequest('No data in request')
+
+        try:
+            json_data = json.loads(request.get_data(as_text=True))
+        except:
+            raise BadRequest('An error occured while loading request data')
+
+        return json_data
+
     @cors_http('POST', '/api/v1/command/opta/add_f1', allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
     def opta_add_f1(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                rpc.opta_collector.add_f1.call_async(**data)
+                rpc.opta_collector.add_f1(**data)
             except:
                 raise BadRequest('An error occurred while adding Opta F1 file')
 
@@ -148,7 +159,7 @@ class ApiService(object):
 
     @cors_http('PUT', '/api/v1/command/opta/ack_f9/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
     def opta_ack_f9(self, request, game_id):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 result = rpc.opta_collector.ack_f9(game_id, data['checksum'])
@@ -170,10 +181,10 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
     def opta_add_ru1(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                rpc.opta_collector.add_ru1.call_async(**data)
+                rpc.opta_collector.add_ru1(**data)
             except:
                 raise BadRequest('An error occurred while adding Opta RU1 file')
 
@@ -206,7 +217,7 @@ class ApiService(object):
 
     @cors_http('PUT', '/api/v1/command/opta/ack_ru7/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
     def opta_ack_ru7(self, request, game_id):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 result = rpc.opta_collector.ack_ru7(game_id, data['checksum'])
@@ -228,7 +239,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/metadata/add_transformation', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def metadata_add_transformation(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.metadata.add_transformation(**data)
@@ -298,7 +309,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/metadata/add_query', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
     def metadata_add_query(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.metadata.add_query(**data)
@@ -346,7 +357,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/metadata/add_template', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
     def metadata_add_template(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.metadata.add_template(**data)
@@ -394,7 +405,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/metadata/template/add_query/<string:template_id>',
                allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
     def metadata_add_query_to_template(self, request, template_id):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.metadata.add_query_to_template(template_id, **data)
@@ -417,7 +428,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/metadata/template/update_svg/<string:template_id>',
                allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
     def metadata_update_svg_in_template(self, request, template_id):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.metadata.update_svg_in_template(template_id, **data)
@@ -429,7 +440,7 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/metadata/query/resolve/<string:query_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_query(self, request, query_id):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             query = bson.json_util.loads(rpc.metadata.get_query(query_id))
 
@@ -455,7 +466,7 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/metadata/template/resolve/<string:template_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template(self, request, template_id):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             template = bson.json_util.loads(rpc.metadata.get_template(template_id))
 
@@ -575,7 +586,7 @@ class ApiService(object):
     @cors_http('GET', '/api/v2/query/metadata/template/resolve/<string:template_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template_with_ids(self, request, template_id):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             template = bson.json_util.loads(rpc.metadata.get_template(template_id))
 
@@ -697,7 +708,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/crontask/update_opta_soccer', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def crontask_update_opta_soccer(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.crontask.update_opta_soccer.call_async(**data)
@@ -709,7 +720,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/crontask/update_opta_rugby', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def crontask_update_opta_rugby(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.crontask.update_opta_rugby.call_async(**data)
@@ -737,7 +748,7 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/datareader/select', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def datareader_select(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 result = bson.json_util.loads(rpc.datareader.select(**data))
@@ -749,7 +760,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/datastore/create_table', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def datastore_create_table(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.datastore.truncate(data['target_table'])
@@ -762,7 +773,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/datastore/write', allowed_roles=('admin'),
                expected_exceptions=BadRequest)
     def datastore_write(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
 
         if 'write_policy' not in data:
             raise BadRequest('Missing write_policy paramerter in posted data')
@@ -802,7 +813,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/referential/add_label', allowed_roles=('admin', 'write'),
                expected_exceptions=BadRequest)
     def referential_add_label(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.referential.add_label(**data)
@@ -839,7 +850,7 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/referential/search_entity', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def referential_search_entity(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 entities = bson.json_util.loads(rpc.referential.search_entity(**data))
@@ -851,7 +862,7 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/referential/search_event', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def referential_search_event(self, request):
-        data = json.loads(request.get_data(as_text=True))
+        data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 events = bson.json_util.loads(rpc.referential.search_event(**data))
