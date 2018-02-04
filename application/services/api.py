@@ -485,7 +485,10 @@ class ApiService(object):
                             for ref in q['referential_parameters']:
                                 if p in ref:
                                     parameters.append(referential_results[ref[p]]['id'])
-                current_results = bson.json_util.loads(rpc.datareader.select(current_sql, parameters))
+                try:
+                    current_results = bson.json_util.loads(rpc.datareader.select(current_sql, parameters))
+                except:
+                    raise BadRequest('An error occured while executing query {}'.format(current_id))
                 labelized_results = list()
                 for row in current_results:
                     labelized_row = row.copy()
