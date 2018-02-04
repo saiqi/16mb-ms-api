@@ -757,7 +757,7 @@ class ApiService(object):
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
-    @cors_http('POST', '/api/v1/command/datastore/create_table', allowed_roles=('admin',),
+    @cors_http('POST', '/api/v1/command/datastore/create_table', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
     def datastore_create_table(self, request):
         data = self._handle_request_data(request)
