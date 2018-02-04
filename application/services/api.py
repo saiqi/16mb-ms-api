@@ -780,7 +780,7 @@ class ApiService(object):
         data = self._handle_request_data(request)
 
         if 'write_policy' not in data:
-            raise BadRequest('Missing write_policy paramerter in posted data')
+            raise BadRequest('Missing write_policy parameter in request data')
 
         write_policy = data['write_policy']
 
@@ -812,6 +812,59 @@ class ApiService(object):
                 raise BadRequest('An error occured while writing in datastore')
 
         return Response(json.dumps({'target_table': data['target_table']}), mimetype='application/json',
+                        status=201)
+
+    @cors_http('POST', '/api/v1/command/datastore/update_transformations', allowed_roles=('admin'),
+               expected_exceptions=BadRequest)
+    def datastore_update_transformations(self, request):
+        data = self._handle_request_data(request)
+
+        if 'trigger_table' not in data:
+            raise BadRequest('Missing trigger_table parameter in request data')
+
+        trigger_table = data['trigger_table']
+
+        with ClusterRpcProxy(self.config) as rpc:
+            pipeline = bson.json_util.loads(rpc.metadata.get_update_pipeline(trigger_table))
+
+            if not pipeline:
+                return Response(json.dumps({'trigger_table': trigger_table}), mimetype ='application/json',
+                                status=200)
+
+            for job in pipeline:
+                for t in job['transformations']:
+                    try:
+                        rpc.datastore.create_or_replace_python_function(t['function_name'], t['function'])
+                    except:
+                        raise BadRequest('An error occured while creating python function in transformation {}'.format(t['id']))
+
+                    if t['type'] == 'fit' and t['process_date'] is None:
+                        try:
+                            last_entry = bson.json_util.loads(rpc.datareader.select(t['output']))
+                            if last_entry and len(last_entry) > 0:
+                                rpc.datastore.delete(t['target_table'], {'id': last_entry[0]['id']})
+                            rpc.datastore.insert_from_select(t['target_table'], t['output'], None)
+                        except:
+                            raise BadRequest('An error occured while fitting transformation {}'.format(t['id']))
+                        rpc.metadata.update_process_date(t['id'])
+                    elif t['type'] in ('transform', 'predict',) and t['materialized'] is True:
+                        try:
+                            if t['parameters'] is None:
+                                rpc.datastore.truncate(t['target_table'])
+                                rpc.datastore.insert_from_select(t['target_table'], t['output'], None)
+                            else:
+                                if len(t['parameters']) > 1:
+                                    raise BadRequest('Does not support transformation with multiple parameters')
+                                param_name = t['parameters'][0]
+                                if 'parameter' not in data:
+                                    raise BadRequest('Transformation requires a parameter')
+                                param_value = data['parameter']
+                                rpc.datastore.delete(t['target_table'], {param_name: param_value})
+                                rpc.datastore.insert_from_select(t['target_table'], t['output'], [param_value])
+                        except:
+                            raise BadRequest('An error occured while computing transformation {}'.format(t['id']))
+                        rpc.metadata.update_process_date(t['id'])
+        return Response(json.dumps({'trigger_table': trigger_table}), mimetype ='application/json',
                         status=201)
 
     @cors_http('POST', '/api/v1/command/referential/add_label', allowed_roles=('admin', 'write'),
