@@ -932,7 +932,7 @@ class ApiService(object):
         data = self._handle_request_data(request)
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                rpc.referential.add_translation_to_entity(entity_id, data['context'], data['format'], data['picture_b64'])
+                rpc.referential.add_picture_to_entity(entity_id, data['context'], data['format'], data['picture_b64'])
             except:
                 raise BadRequest('An error occured while adding picture to entity')
         return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
@@ -967,6 +967,6 @@ class ApiService(object):
             try:
                 events = bson.json_util.loads(rpc.referential.search_event(**data))
             except:
-                raise BadRequest('An error occured while searching entity')
+                raise BadRequest('An error occured while searching event')
 
         return Response(json.dumps(events, cls=DateEncoder), mimetype='application/json')
