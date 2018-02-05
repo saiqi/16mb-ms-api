@@ -904,6 +904,49 @@ class ApiService(object):
 
         return Response(json.dumps(label), mimetype='application/json')
 
+    @cors_http('POST', '/api/v1/command/referential/add_entity', allowed_roles=('admin'),
+               expected_exceptions=BadRequest)
+    def referential_add_entity(self, request):
+        data = self._handle_request_data(request)
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.referential.add_entity(**data)
+            except:
+                raise BadRequest('An error occured while adding entity')
+        return Response(json.dumps({'id': data['id']}), mimetype='application/json', status=201)
+
+    @cors_http('POST', '/api/v1/command/referential/add_translation_to_entity/<string:entity_id>', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
+    def referential_add_translation_to_entity(self, request, entity_id):
+        data = self._handle_request_data(request)
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.referential.add_translation_to_entity(entity_id, data['language'], data['translation'])
+            except:
+                raise BadRequest('An error occured while adding translation to entity')
+        return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
+
+    @cors_http('POST', '/api/v1/command/referential/add_picture_to_entity/<string:entity_id>', allowed_roles=('admin', 'write'),
+               expected_exceptions=BadRequest)
+    def referential_add_picture_to_entity(self, request, entity_id):
+        data = self._handle_request_data(request)
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.referential.add_translation_to_entity(entity_id, data['context'], data['format'], data['picture_b64'])
+            except:
+                raise BadRequest('An error occured while adding picture to entity')
+        return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
+
+    @cors_http('POST', '/api/v1/command/referential/add_event', allowed_roles=('admin'), expected_exceptions=BadRequest)
+    def referential_add_event(self, request):
+        data = self._handle_request_data(request)
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.referential.add_event(**data)
+            except:
+                raise BadRequest('An error occured while adding event')
+        return Response(json.dumps({'id': data['id']}), mimetype='application/json', status=201)
+
     @cors_http('GET', '/api/v1/query/referential/search_entity', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def referential_search_entity(self, request):
