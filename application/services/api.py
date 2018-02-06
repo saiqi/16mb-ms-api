@@ -466,7 +466,7 @@ class ApiService(object):
     @staticmethod
     def _get_display_name(entity, language):
         if 'internationalization' in entity and language in entity['internationalization']:
-            return entity[k]['internationalization']
+            return entity['internationalization'][language]
         return entity['common_name']
 
     @cors_http('GET', '/api/v1/query/metadata/template/resolve/<string:template_id>',
