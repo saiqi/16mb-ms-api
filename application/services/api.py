@@ -463,6 +463,12 @@ class ApiService(object):
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
+    @staticmethod
+    def _get_display_name(entity, language):
+        if 'internationalization' in entity and language in entity['internationalization']:
+            return entity[k]['internationalization']
+        return entity['common_name']
+
     @cors_http('GET', '/api/v1/query/metadata/template/resolve/<string:template_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template(self, request, template_id):
@@ -499,14 +505,15 @@ class ApiService(object):
                 except Exception as e:
                     raise BadRequest(str(e))
                 for k in referential_search_doc:
+                    referential_results[k]['display_name'] = self._get_display_name(referential_results[k], language)
                     picture = None
-                    if 'picture' in referential_search_doc[k]:
+                    if 'picture' in referential_search_doc[k] and json_only is False:
                         picture = rpc.referential.get_entity_picture(
                             referential_results[k]['id'], referential_search_doc[k]['picture']['context'],
                             referential_search_doc[k]['picture']['format'])
                     referential_results[k]['picture'] = picture
                     logo = None
-                    if 'logo' in referential_search_doc[k]:
+                    if 'logo' in referential_search_doc[k] and json_only is False:
                         logo = rpc.referential.get_entity_logo(
                             referential_results[k]['id'], referential_search_doc[k]['logo']['context'],
                             referential_search_doc[k]['logo']['format'])
@@ -560,11 +567,12 @@ class ApiService(object):
                                 current_ref_result = bson.json_util.loads(rpc.referential.get_event_by_id(row[cfg]))
                             else:
                                 current_ref_result = bson.json_util.loads(rpc.referential.get_entity_by_id(row[cfg]))
-                                if 'picture' in current_ref_config[cfg]:
+                                current_ref_result['display_name'] = self._get_display_name(current_ref_result, language)
+                                if 'picture' in current_ref_config[cfg] and json_only is False:
                                     ref_pic = rpc.referential.get_entity_picture(
                                         row[cfg], current_ref_config[cfg]['picture']['context'],
                                         current_ref_config[cfg]['picture']['format'])
-                                if 'logo' in current_ref_config[cfg]:
+                                if 'logo' in current_ref_config[cfg] and json_only is False:
                                     ref_logo = rpc.referential.get_entity_logo(
                                         row[cfg], current_ref_config[cfg]['logo']['context'],
                                         current_ref_config[cfg]['logo']['format'])
@@ -623,13 +631,14 @@ class ApiService(object):
                         else:
                             current_ref_str = rpc.referential.get_event_by_id(v['id'])
                         referential_results[k] = bson.json_util.loads(current_ref_str)
+                        referential_results[k]['display_name'] = self._get_display_name(referential_results[k], language)
                         picture = None
-                        if 'picture' in v:
+                        if 'picture' in v and json_only is False:
                             picture = rpc.referential.get_entity_picture(v['id'], v['picture']['context'],
                                                                          v['picture']['format'])
                         referential_results[k]['picture'] = picture
                         logo = None
-                        if 'logo' in v:
+                        if 'logo' in v and json_only is False:
                             logo = rpc.referential.get_entity_logo(v['id'], v['logo']['context'],
                                                                    v['logo']['format'])
                         referential_results[k]['logo'] = logo
@@ -684,11 +693,12 @@ class ApiService(object):
                                 current_ref_result = bson.json_util.loads(rpc.referential.get_event_by_id(row[cfg]))
                             else:
                                 current_ref_result = bson.json_util.loads(rpc.referential.get_entity_by_id(row[cfg]))
-                                if 'picture' in current_ref_config[cfg]:
+                                current_ref_result = self._get_display_name(current_ref_result, language)
+                                if 'picture' in current_ref_config[cfg] and json_only is False:
                                     ref_pic = rpc.referential.get_entity_picture(
                                         row[cfg], current_ref_config[cfg]['picture']['context'],
                                         current_ref_config[cfg]['picture']['format'])
-                                if 'logo' in current_ref_config[cfg]:
+                                if 'logo' in current_ref_config[cfg] and json_only is False:
                                     ref_logo = rpc.referential.get_entity_logo(
                                         row[cfg], current_ref_config[cfg]['logo']['context'],
                                         current_ref_config[cfg]['logo']['format'])
