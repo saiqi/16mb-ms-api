@@ -46,9 +46,9 @@ class CorsHttpRequestHandler(HttpRequestHandler):
             status_code = 500
 
         error_dict = serialize(exc)
-        payload = u'Error: {exc_type}: {value}\n'.format(**error_dict)
+        payload = {'Error': error_dict['value']}
 
-        return Response(payload, status=status_code)
+        return Response(json.dumps(payload), mimetype='application/json', status=status_code)
 
     @classmethod
     def decorator(cls, *args, **kwargs):
