@@ -459,7 +459,7 @@ class ApiService(object):
 
         return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
 
-    @cors_http('GET', '/api/v1/query/metadata/query/resolve/<string:query_id>',
+    @cors_http('POST', '/api/v1/query/metadata/query/resolve/<string:query_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_query(self, request, query_id):
         data = self._handle_request_data(request)
@@ -491,7 +491,7 @@ class ApiService(object):
             return entity['internationalization'][language]
         return entity['common_name']
 
-    @cors_http('GET', '/api/v1/query/metadata/template/resolve/<string:template_id>',
+    @cors_http('POST', '/api/v1/query/metadata/template/resolve/<string:template_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template(self, request, template_id):
         data = self._handle_request_data(request)
@@ -615,7 +615,7 @@ class ApiService(object):
 
         return Response(infography, mimetype='image/svg+xml')
 
-    @cors_http('GET', '/api/v2/query/metadata/template/resolve/<string:template_id>',
+    @cors_http('POST', '/api/v2/query/metadata/template/resolve/<string:template_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template_with_ids(self, request, template_id):
         data = self._handle_request_data(request)
@@ -780,18 +780,6 @@ class ApiService(object):
                 raise BadRequest('An error occurred while retrieving crontask logs')
 
         return Response(json.dumps(raw_logs, cls=DateEncoder), mimetype='application/json')
-
-    @cors_http('GET', '/api/v1/query/datareader/select', allowed_roles=('admin', 'write', 'read',),
-               expected_exceptions=BadRequest)
-    def datareader_select(self, request):
-        data = self._handle_request_data(request)
-        with ClusterRpcProxy(self.config) as rpc:
-            try:
-                result = bson.json_util.loads(rpc.datareader.select(**data))
-            except:
-                raise BadRequest('An error occurred while getting result from datareader')
-
-        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/datastore/create_table', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
@@ -982,10 +970,22 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/referential/search_entity', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def referential_search_entity(self, request):
-        data = self._handle_request_data(request)
+        if 'name' not in request.args:
+            raise BadRequest('No name in request s arguments')
+
+        name = request.args['name']
+
+        type = None
+        if 'type' in request.args:
+            type = request.args['type']
+
+        provider = None
+        if 'provider' in request.args:
+            provider = request.args['provider']
+
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                entities = bson.json_util.loads(rpc.referential.search_entity(**data))
+                entities = bson.json_util.loads(rpc.referential.search_entity(name, type=type, provider=provider))
             except:
                 raise BadRequest('An error occured while searching entity')
 
@@ -994,11 +994,40 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/referential/search_event', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def referential_search_event(self, request):
-        data = self._handle_request_data(request)
+        if 'name' not in request.args:
+            raise BadRequest('No name in request s arguments')
+
+        name = request.args['name']
+
+        if 'date' not in request.args:
+            raise BadRequest('No date in request s arguments')
+
+        date = request.args['date']
+
+        type = None
+        if 'type' in request.args:
+            type = request.args['type']
+
+        provider = None
+        if 'provider' in request.args:
+            provider = request.args['provider']
+
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                events = bson.json_util.loads(rpc.referential.search_event(**data))
+                events = bson.json_util.loads(rpc.referential.search_event(name, date, type=type, provider=provider))
             except:
                 raise BadRequest('An error occured while searching event')
 
         return Response(json.dumps(events, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('PUT', '/api/v1/command/referential/add_informations_to_entity/<string:entity_id>',
+               allowed_roles=('admin'), expected_exceptions=BadRequest)
+    def referential_add_informations_to_entity(self, request, entity_id):
+        data = self._handle_request_data(request)
+        with ClusterRpcProxy(self.config) as rpc:
+            try:
+                rpc.referential.add_informations_to_entity(entity_id, data)
+            except:
+                raise BadRequest('An error occured while adding informations to entity')
+
+        return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
