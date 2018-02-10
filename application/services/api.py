@@ -146,12 +146,14 @@ class ApiService(object):
     def opta_get_f9(self, request, game_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                result = bson.json_util.loads(rpc.opta_collector.get_f9(game_id))
+                game = rpc.opta_collector.get_f9(game_id)
             except:
                 raise BadRequest('An error occured while getting Opta F9 file')
 
-            if result is None:
+            if game is None:
                 raise NotFound('Opta F9 file not found')
+
+            result = bson.json_util.loads(game)
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
@@ -213,12 +215,14 @@ class ApiService(object):
     def opta_get_ru7(self, request, game_id):
         with ClusterRpcProxy(self.config) as rpc:
             try:
-                result = bson.json_util.loads(rpc.opta_collector.get_ru7(game_id))
+                game = rpc.opta_collector.get_ru7(game_id)
             except:
                 raise BadRequest('An error occured while getting Opta RU7 file')
 
-            if result is None:
+            if game is None:
                 raise NotFound('Opta RU7 file not found')
+
+            result = bson.json_util.loads(game)
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
