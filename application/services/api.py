@@ -132,14 +132,14 @@ class ApiService(object):
 
         return Response(json.dumps(data), mimetype='application/json', status=201)
 
-    @cors_http('POST', '/api/v1/commad/opta/update_all_f1', allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
+    @cors_http('POST', '/api/v1/command/opta/update_all_f1', allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
     def opta_update_all_f1(self, request):
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.opta_collector.update_all_f1()
             except:
                 raise BadRequest('An error occured while updating Opta F1 files')
-        return Response({'status': 'OK'}, mimetype='application/json', status=201)
+        return Response(json.dumps({'status': 'OK'}), mimetype='application/json', status=201)
 
     @cors_http('GET', '/api/v1/query/opta/f9/<string:game_id>', allowed_roles=('admin', 'write',),
                expected_exceptions=(BadRequest, NotFound))
@@ -199,14 +199,14 @@ class ApiService(object):
 
         return Response(json.dumps(data), mimetype='application/json', status=201)
 
-    @cors_http('POST', '/api/v1/commad/opta/update_all_ru1', allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
+    @cors_http('POST', '/api/v1/command/opta/update_all_ru1', allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
     def opta_update_all_ru1(self, request):
         with ClusterRpcProxy(self.config) as rpc:
             try:
                 rpc.opta_collector.update_all_ru1()
             except:
                 raise BadRequest('An error occured while updating Opta RU1 files')
-        return Response({'status': 'OK'}, mimetype='application/json', status=201)
+        return Response(json.dumps({'status': 'OK'}), mimetype='application/json', status=201)
 
     @cors_http('GET', '/api/v1/query/opta/ru7/<string:game_id>', allowed_roles=('admin', 'write',),
                expected_exceptions=(BadRequest, NotFound))
