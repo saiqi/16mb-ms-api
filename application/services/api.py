@@ -779,29 +779,34 @@ class ApiService(object):
             raise BadRequest('Wrong value for parameter write_policy')
 
         try:
+            meta = list(map(tuple, data['meta']))
+        except:
+            raise BadRequest('Bad formated meta')
+
+        try:
             if write_policy == 'insert':
-                self.datastore.insert(data['target_table'], data['records'], data['meta'])
+                self.datastore.insert(data['target_table'], data['records'], meta)
             elif write_policy == 'upsert':
-                self.datastore.upsert(data['target_table'], data['upsert_key'], data['records'], data['meta'])
+                self.datastore.upsert(data['target_table'], data['upsert_key'], data['records'], meta)
             elif write_policy == 'bulk_insert':
-                self.datastore.bulk_insert(data['target_table'], data['records'], data['meta'])
+                self.datastore.bulk_insert(data['target_table'], data['records'], meta)
             elif write_policy == 'delete_insert':
                 self.datastore.delete(data['target_table'], data['delete_keys'])
-                self.datastore.insert(data['target_table'], data['records'], data['meta'])
+                self.datastore.insert(data['target_table'], data['records'], meta)
             elif write_policy == 'delete_bulk_insert':
                 self.datastore.delete(data['target_table'], data['delete_keys'])
-                self.datastore.bulk_insert(data['target_table'], data['records'], data['meta'])
+                self.datastore.bulk_insert(data['target_table'], data['records'], meta)
             elif write_policy == 'truncate_insert':
                 self.datastore.truncate(data['target_table'])
-                self.datastore.insert(data['target_table'], data['records'], data['meta'])
+                self.datastore.insert(data['target_table'], data['records'], meta)
             else:
                 self.datastore.truncate(data['target_table'])
-                self.datastore.bulk_insert(data['target_table'], data['records'], data['meta'])
+                self.datastore.bulk_insert(data['target_table'], data['records'], meta)
         except:
             raise BadRequest('An error occured while writing in datastore')
 
-        return Response(json.dumps({'target_table': data['target_table']}), mimetype='application/json',
-                        status=201)
+        return Response(json.dumps({'target_table': data['target_table'], 'count': len(data['records'])}),
+                        mimetype='application/json', status=201)
 
     @cors_http('POST', '/api/v1/command/datastore/update_transformations', allowed_roles=('admin'),
                expected_exceptions=BadRequest)
