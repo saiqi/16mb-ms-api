@@ -933,6 +933,26 @@ class ApiService(object):
             raise BadRequest('An error occured while adding event')
         return Response(json.dumps({'id': data['id']}), mimetype='application/json', status=201)
 
+    @cors_http('GET', '/api/v1/query/referential/entity/<string:entity_id>', allowed_roles=('admin', 'write', 'read'),
+               expected_exceptions=(BadRequest, NotFound))
+    def referential_get_entity_by_id(self, request, entity_id):
+        entity = bson.json_util.loads(self.referential.get_entity_by_id(entity_id))
+
+        if not entity:
+            raise NotFound('Entity not found')
+
+        return Response(json.dumps(entity, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('GET', '/api/v1/query/referential/event/<string:event_id>', allowed_roles=('admin', 'write', 'read'),
+               expected_exceptions=(BadRequest, NotFound))
+    def referential_get_event_by_id(self, request, event_id):
+        event = bson.json_util.loads(self.referential.get_event_by_id(event_id))
+
+        if not event:
+            raise NotFound('Event not found')
+
+        return Response(json.dumps(event, cls=DateEncoder), mimetype='application/json')
+
     @cors_http('GET', '/api/v1/query/referential/search_entity', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def referential_search_entity(self, request):
@@ -994,3 +1014,26 @@ class ApiService(object):
             raise BadRequest('An error occured while adding informations to entity')
 
         return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
+
+    @cors_http('POST', '/api/v1/command/referential/update_ngrams', allowed_roles=('admin'), expected_exceptions=BadRequest)
+    def referential_update_ngrams(self, request):
+        result = self.referential.update_ngrams_search_collection()
+        return Response(json.dumps({'Status': 'OK'}), mimetype='application/json', status=201)
+
+    @cors_http('GET', '/api/v1/query/referential/search', allowed_roles=('admin', 'write', 'read'),
+               expected_exceptions=BadRequest)
+    def referential_fuzzy_search(self, request):
+        if 'query' not in request.args:
+            raise BadRequest('No query in request s arguments')
+        query = request.args['query']
+
+        if 'type' not in request.args:
+            raise BadRequest('No type in request s arguments')
+        type = request.args['type']
+
+        if 'provider' not in request.args:
+            raise BadRequest('No provider in request s arguments')
+        provider = request.args['provider']
+
+        results = bson.json_util.loads(self.referential.fuzzy_search(query, type, provider))
+        return Response(json.dumps(results), mimetype='application/json')
