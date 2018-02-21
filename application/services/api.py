@@ -385,7 +385,11 @@ class ApiService(object):
                expected_exceptions=BadRequest)
     def metatdata_get_all_templates(self, request):
         try:
-            result = bson.json_util.loads(self.metadata.get_all_templates())
+            if 'bundle' in request.args:
+                bundle = request.args['bundle']
+                result = bson.json_util.loads(self.metadata.get_templates_by_bundle(bundle))
+            else:
+                result = bson.json_util.loads(self.metadata.get_all_templates())
         except:
             raise BadRequest('An error occurred while retrieving all templates')
 
