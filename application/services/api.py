@@ -136,6 +136,20 @@ class ApiService(object):
 
         return Response(json.dumps(data), mimetype='application/json', status=201)
 
+    @cors_http('GET', '/api/v1/query/opta/f1/<string:game_id>', allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    def opta_get_f1(self, request, game_id):
+        try:
+            game = self.opta_collector.get_f1(game_id)
+        except:
+            raise BadRequest('An error occured while getting Opta F1 details')
+
+        if game is None:
+            raise NotFound('Opta F1 detail not found')
+
+        result = bson.json_util.loads(game)
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
     @cors_http('POST', '/api/v1/command/opta/update_all_f1', allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
     def opta_update_all_f1(self, request):
         try:
@@ -198,6 +212,20 @@ class ApiService(object):
             raise BadRequest('An error occurred while adding Opta RU1 file')
 
         return Response(json.dumps(data), mimetype='application/json', status=201)
+
+    @cors_http('GET', '/api/v1/query/opta/ru1/<string:game_id>', allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    def opta_get_ru1(self, request, game_id):
+        try:
+            game = self.opta_collector.get_ru1(game_id)
+        except:
+            raise BadRequest('An error occured while getting Opta RU1 details')
+
+        if game is None:
+            raise NotFound('Opta RU1 detail not found')
+
+        result = bson.json_util.loads(game)
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/opta/update_all_ru1', allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
     def opta_update_all_ru1(self, request):
