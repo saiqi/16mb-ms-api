@@ -622,7 +622,7 @@ class ApiService(object):
 
         return Response(infography, mimetype='image/svg+xml')
 
-    @cors_http('POST', '/api/v2/query/metadata/template/resolve/<string:template_id>',
+    @cors_http('POST', '/api/v1/query/metadata/template/resolve_with_ids/<string:template_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template_with_ids(self, request, template_id):
         data = self._handle_request_data(request)
