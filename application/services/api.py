@@ -584,7 +584,7 @@ class ApiService(object):
                             elif current_labels[lab] == 'label':
                                 current_label = self.referential.get_labels_by_id_and_language_and_context(row[lab], language, context)
                                 if current_label is None:
-                                    raise BadRequest('Label {} not found'.format(row[lab]))
+                                    raise BadRequest('Label {} not found (language: {} / context: {})'.format(row[lab], language, context))
                                 labelized_row[lab] = current_label['label']
                 labelized_results.append(labelized_row)
                 if 'referential_results' in q and q['referential_results']:
