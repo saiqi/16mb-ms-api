@@ -658,6 +658,8 @@ class ApiService(object):
                         current_ref_str = self.referential.get_entity_by_id(v['id'])
                     else:
                         current_ref_str = self.referential.get_event_by_id(v['id'])
+                    if current_ref_str is None:
+                        raise NotFound('Referential entry not found: {}'.format(v['id']))
                     referential_results[k] = bson.json_util.loads(current_ref_str)
                     referential_results[k]['display_name'] = self._get_display_name(referential_results[k], language)
                     picture = None
