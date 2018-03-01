@@ -721,9 +721,13 @@ class ApiService(object):
                         ref_logo = None
                         if current_ref_config[cfg]['event_or_entity'] == 'event':
                             current_ref_result = bson.json_util.loads(self.referential.get_event_by_id(row[cfg]))
+                            if not current_ref_result:
+                                raise NotFound('Event {} not found'.format(row[cfg]))
                         else:
                             current_ref_result = bson.json_util.loads(self.referential.get_entity_by_id(row[cfg]))
-                            current_ref_result = self._get_display_name(current_ref_result, language)
+                            if not current_ref_result:
+                                raise NotFound('Entity {} not found'.format(row[cfg]))
+                            current_ref_result['display_name'] = self._get_display_name(current_ref_result, language)
                             if 'picture' in current_ref_config[cfg] and json_only is False:
                                 ref_pic = self.referential.get_entity_picture(
                                     row[cfg], current_ref_config[cfg]['picture']['context'],
