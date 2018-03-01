@@ -664,11 +664,11 @@ class ApiService(object):
                     referential_results[k]['display_name'] = self._get_display_name(referential_results[k], language)
                     picture = None
                     if 'picture' in v and json_only is False:
-                        context = v['picture']['context']
-                        _format = v['picture']['format']
-                        picture = self.referential.get_entity_picture(v['id'], context, _format)
+                        pic_context = v['picture']['context']
+                        pic_format = v['picture']['format']
+                        picture = self.referential.get_entity_picture(v['id'], pic_context, pic_format)
                         if not picture:
-                            raise NotFound('Picture not found for referential entry: {} (context: {} / format: {})'.format(v['id'], context, _format))
+                            raise NotFound('Picture not found for referential entry: {} (context: {} / format: {})'.format(v['id'], pic_context, pic_format))
                     referential_results[k]['picture'] = picture
                     logo = None
                     if 'logo' in v and json_only is False:
