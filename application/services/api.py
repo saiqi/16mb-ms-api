@@ -549,6 +549,7 @@ class ApiService(object):
                         raise NotFound('Referential entry not found: {}'.format(v['id']))
                     referential_results[k] = bson.json_util.loads(current_ref_str)
                     referential_results[k]['display_name'] = self._get_display_name(referential_results[k], language)
+                    referential_results[k]['short_name'] = self._get_short_name(referential_results[k], language)
                     picture = None
                     if 'picture' in v and json_only is False:
                         pic_context = v['picture']['context']
