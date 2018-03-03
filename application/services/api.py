@@ -587,7 +587,7 @@ class ApiService(object):
                 current_results = bson.json_util.loads(self.datareader.select(current_sql, parameters))
             except:
                 raise BadRequest('An error occured while executing query {}'.format(current_id))
-            if current_results is None:
+            if current_results is None or len(current_results) == 0:
                 raise BadRequest('Query {} returns nothing'.format(current_id))
             labelized_results = list()
             for row in current_results:
