@@ -694,6 +694,16 @@ class ApiService(object):
 
         return Response(json.dumps({'target_table': data['target_table']}), mimetype='application/json', status=201)
 
+    @cors_http('GET', '/api/v1/query/datareader/table/<string:table_name>', allowed_roles=('admin', 'write', 'read'), 
+               expected_exceptions=BadRequest)
+    def datareader_get_table(self, request, table_name):
+        try:
+            result = bson.json_util.loads(self.datareader.select('SELECT * FROM {}'.format(table_name)))
+        except:
+            raise BadRequest('An error occured while retrieving data from {}'.format(table_name))
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json', status=200)
+
     @cors_http('POST', '/api/v1/command/datastore/write', allowed_roles=('admin'),
                expected_exceptions=BadRequest)
     def datastore_write(self, request):
