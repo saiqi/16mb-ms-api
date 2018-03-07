@@ -624,6 +624,9 @@ class ApiService(object):
                                 ref_pic = self.referential.get_entity_picture(
                                     row[cfg], current_ref_config[cfg]['picture']['context'],
                                     current_ref_config[cfg]['picture']['format'])
+                                if not ref_pic:
+                                    raise NotFound('Picture not found for referential entry: {} (context: {} / format: {})'.\
+                                        format(row[cfg], current_ref_config[cfg]['picture']['context'], current_ref_config[cfg]['picture']['format']))
                             if 'logo' in current_ref_config[cfg] and json_only is False:
                                 ref_logo = self.referential.get_entity_logo(
                                     row[cfg], current_ref_config[cfg]['logo']['context'],
