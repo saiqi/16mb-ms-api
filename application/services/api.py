@@ -761,12 +761,11 @@ class ApiService(object):
 
         trigger_table = data['trigger_table']
 
-        pipeline = bson.json_util.loads(self.metadata.get_update_pipeline(trigger_table))
-
-        if not pipeline:
+        meta = self.metadata.get_update_pipeline(trigger_table)
+        if not meta:
             return Response(json.dumps({'trigger_table': trigger_table}), mimetype ='application/json',
                             status=200)
-
+        pipeline = bson.json_util.loads(meta)
         for job in pipeline:
             for t in job['transformations']:
                 try:
