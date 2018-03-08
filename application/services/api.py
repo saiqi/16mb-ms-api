@@ -962,6 +962,12 @@ class ApiService(object):
         result = self.referential.update_ngrams_search_collection()
         return Response(json.dumps({'Status': 'OK'}), mimetype='application/json', status=201)
 
+    @cors_http('POST', '/api/v1/command/referential/update_ngrams/<string:entry_id>', allowed_roles=('admin',), 
+               expected_exceptions=BadRequest)
+    def referential_update_entry_ngrams(self, request):
+        result = self.referential.update_entry_ngrams(entry_id)
+        return Response(json.dumps(result), mimetype='application/json', status=201)
+
     @cors_http('GET', '/api/v1/query/referential/search', allowed_roles=('admin', 'write', 'read'),
                expected_exceptions=BadRequest)
     def referential_fuzzy_search(self, request):
