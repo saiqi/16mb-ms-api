@@ -964,7 +964,7 @@ class ApiService(object):
 
     @cors_http('POST', '/api/v1/command/referential/update_ngrams/<string:entry_id>', allowed_roles=('admin',), 
                expected_exceptions=BadRequest)
-    def referential_update_entry_ngrams(self, request):
+    def referential_update_entry_ngrams(self, request, entry_id):
         result = self.referential.update_entry_ngrams(entry_id)
         return Response(json.dumps(result), mimetype='application/json', status=201)
 
