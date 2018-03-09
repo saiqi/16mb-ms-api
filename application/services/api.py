@@ -501,7 +501,7 @@ class ApiService(object):
 
     @staticmethod
     def _get_short_name(entity, language):
-        if 'informations' in entity and 'first_name' in entity['informations']\
+        if 'informations' in entity and entity['informations']\
         and 'last_name' in entity['informations'] and 'known' in entity['informations']:
             if entity['informations']['known']:
                 return entity['informations']['known']
