@@ -866,6 +866,16 @@ class ApiService(object):
             raise BadRequest('An error occured while adding picture to entity')
         return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
 
+    @cors_http('DELETE', '/api/v1/command/referential/delete_picture_from_entity/<string:entity_id>/<string:context>/<string:format>',
+               allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
+    def referential_delete_picture_from_entity(self, request, entity_id, context, format):
+        try:
+            self.referential.delete_picture_from_entity(entity_id, context, format)
+        except:
+            raise BadRequest('An error occured while deleting picture from entity')
+
+        return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=204)
+
     @cors_http('GET', '/api/v1/query/referential/entity/picture/<string:entity_id>/<string:context>/<string:format>',
                allowed_roles=('admin', 'write', 'read',), expected_exceptions=NotFound)
     def referential_get_entity_picture(self, request, entity_id, context, format):
