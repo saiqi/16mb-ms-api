@@ -866,6 +866,21 @@ class ApiService(object):
             raise BadRequest('An error occured while adding picture to entity')
         return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
 
+    @cors_http('GET', '/api/v1/query/referential/entity/picture/<string:entity_id>/<string:context>/<string:format>',
+               allowed_roles=('admin', 'write', 'read',), expected_exceptions=NotFound)
+    def referential_get_entity_picture(self, request, entity_id, context, format):
+        try:
+            entity = bson.json_util.loads(self.referential.get_entity_by_id(entity_id))
+        except:
+            raise NotFound('Entity {} not found'.format(entry_id))
+
+        try:
+            pic = self.referential.get_entity_picture(entity_id, context, format)
+        except:
+            raise NotFound('Picture ({}/{}) not found for entity {}'.format(context, format, entity_id))
+
+        return Response(pic, mimetype='image/png', status=200)
+
     @cors_http('POST', '/api/v1/command/referential/add_event', allowed_roles=('admin'), expected_exceptions=BadRequest)
     def referential_add_event(self, request):
         data = self._handle_request_data(request)
