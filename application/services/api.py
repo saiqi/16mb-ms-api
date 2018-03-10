@@ -879,6 +879,9 @@ class ApiService(object):
         except:
             raise NotFound('Picture ({}/{}) not found for entity {}'.format(context, format, entity_id))
 
+        if pic is None:
+            raise NotFound('Picture ({}/{}) not found for entity {}'.format(context, format, entity_id))            
+
         return Response(pic, mimetype='image/png', status=200)
 
     @cors_http('POST', '/api/v1/command/referential/add_event', allowed_roles=('admin'), expected_exceptions=BadRequest)
