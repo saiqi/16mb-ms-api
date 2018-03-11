@@ -812,7 +812,7 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/command/datastore/apply_transformation/<string:transformation_id>', allowed_roles=('admin',), 
                expected_exceptions=(BadRequest, NotFound))
     def datastore_apply_transformation(self, request, transformation_id):
-        data = self._handle_request_data(data)
+        data = self._handle_request_data(request)
         try:
             result = self.metadata.get_transformation(transformation_id)
         except:
