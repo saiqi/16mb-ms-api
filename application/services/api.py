@@ -308,15 +308,15 @@ class ApiService(object):
         return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=204)
 
     @cors_http('POST', '/api/v1/command/metadata/deploy_function/<string:transformation_id>', allowed_roles=('admin',),
-               expected_exceptions=BadRequest)
+               expected_exceptions=(BadRequest, NotFound))
     def metadata_deploy_function(self, request, transformation_id):
         try:
             result = self.metadata.get_transformation(transformation_id)
         except:
-            raise BadRequest('An error occurred while retrieving transformation: {}'.format(transformation_id))
+            raise NotFound('An error occurred while retrieving transformation: {}'.format(transformation_id))
 
         if not result:
-            raise BadRequest('No transformation {} in metadata'.format(transformation_id))
+            raise NotFound('No transformation {} in metadata'.format(transformation_id))
 
         transformation = bson.json_util.loads(result)
 
@@ -758,6 +758,39 @@ class ApiService(object):
         return Response(json.dumps({'target_table': data['target_table'], 'count': len(data['records'])}),
                         mimetype='application/json', status=201)
 
+    def _compute_transformation(self, t, param_value=None):
+        try:
+            self.datastore.create_or_replace_python_function(t['function_name'], t['function'])
+        except:
+            raise BadRequest('An error occured while creating python function in transformation {}'.format(t['id']))
+
+        if t['type'] == 'fit' and t['process_date'] is None:
+            try:
+                last_entry = bson.json_util.loads(self.datareader.select(t['output']))
+                if last_entry and len(last_entry) > 0:
+                    self.datastore.delete(t['target_table'], {'id': last_entry[0]['id']})
+                self.datastore.insert_from_select(t['target_table'], t['output'], None)
+            except:
+                raise BadRequest('An error occured while fitting transformation {}'.format(t['id']))
+            self.metadata.update_process_date(t['id'])
+        elif t['type'] in ('transform', 'predict',) and t['materialized'] is True:
+            try:
+                if t['parameters'] is None:
+                    self.datastore.truncate(t['target_table'])
+                    self.datastore.insert_from_select(t['target_table'], t['output'], None)
+                else:
+                    if len(t['parameters']) > 1:
+                        raise BadRequest('Does not support transformation with multiple parameters')
+                    param_name = t['parameters'][0]
+                    if param_value is None:
+                        raise BadRequest('Transformation requires a parameter')
+                    self.datastore.delete(t['target_table'], {param_name: param_value})
+                    self.datastore.insert_from_select(t['target_table'], t['output'], [param_value])
+            except:
+                raise BadRequest('An error occured while computing transformation {}'.format(t['id']))
+            self.metadata.update_process_date(t['id'])
+
+
     @cors_http('POST', '/api/v1/command/datastore/update_transformations', allowed_roles=('admin'),
                expected_exceptions=BadRequest)
     def datastore_update_transformations(self, request):
@@ -765,6 +798,10 @@ class ApiService(object):
 
         if 'trigger_table' not in data:
             raise BadRequest('Missing trigger_table parameter in request data')
+
+        param_value = None
+        if 'parameter' in data:
+            param_value = data['parameter']
 
         trigger_table = data['trigger_table']
 
@@ -775,39 +812,30 @@ class ApiService(object):
         pipeline = bson.json_util.loads(meta)
         for job in pipeline:
             for t in job['transformations']:
-                try:
-                    self.datastore.create_or_replace_python_function(t['function_name'], t['function'])
-                except:
-                    raise BadRequest('An error occured while creating python function in transformation {}'.format(t['id']))
-
-                if t['type'] == 'fit' and t['process_date'] is None:
-                    try:
-                        last_entry = bson.json_util.loads(self.datareader.select(t['output']))
-                        if last_entry and len(last_entry) > 0:
-                            self.datastore.delete(t['target_table'], {'id': last_entry[0]['id']})
-                        self.datastore.insert_from_select(t['target_table'], t['output'], None)
-                    except:
-                        raise BadRequest('An error occured while fitting transformation {}'.format(t['id']))
-                    self.metadata.update_process_date(t['id'])
-                elif t['type'] in ('transform', 'predict',) and t['materialized'] is True:
-                    try:
-                        if t['parameters'] is None:
-                            self.datastore.truncate(t['target_table'])
-                            self.datastore.insert_from_select(t['target_table'], t['output'], None)
-                        else:
-                            if len(t['parameters']) > 1:
-                                raise BadRequest('Does not support transformation with multiple parameters')
-                            param_name = t['parameters'][0]
-                            if 'parameter' not in data:
-                                raise BadRequest('Transformation requires a parameter')
-                            param_value = data['parameter']
-                            self.datastore.delete(t['target_table'], {param_name: param_value})
-                            self.datastore.insert_from_select(t['target_table'], t['output'], [param_value])
-                    except:
-                        raise BadRequest('An error occured while computing transformation {}'.format(t['id']))
-                    self.metadata.update_process_date(t['id'])
+                self._compute_transformation(t, param_value)
         return Response(json.dumps({'trigger_table': trigger_table}), mimetype ='application/json',
                         status=201)
+
+    @cors_http('POST', '/api/v1/command/datastore/apply_transformation/<string:transformation_id>', allowed_roles=('admin',), 
+               expected_exceptions=(BadRequest, NotFound))
+    def datastore_apply_transformation(self, request, transformation_id):
+        data = self._handle_request_data(request)
+        try:
+            result = self.metadata.get_transformation(transformation_id)
+        except:
+            raise NotFound('An error occurred while retrieving transformation: {}'.format(transformation_id))
+
+        if not result:
+            raise NotFound('No transformation {} in metadata'.format(transformation_id))
+
+        param_value = None
+        if 'parameter' in data:
+            param_value = data['parameter']
+
+        transformation = bson.json_util.loads(result)
+        self._compute_transformation(transformation, param_value)
+
+        return Response(json.dumps({'id': transformation_id}), mimetype='application/json', status=201)
 
     @cors_http('POST', '/api/v1/command/referential/add_label', allowed_roles=('admin', 'write'),
                expected_exceptions=BadRequest)
@@ -872,6 +900,34 @@ class ApiService(object):
         except:
             raise BadRequest('An error occured while adding picture to entity')
         return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
+
+    @cors_http('DELETE', '/api/v1/command/referential/delete_picture_from_entity/<string:entity_id>/<string:context>/<string:format>',
+               allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
+    def referential_delete_picture_from_entity(self, request, entity_id, context, format):
+        try:
+            self.referential.delete_picture_from_entity(entity_id, context, format)
+        except:
+            raise BadRequest('An error occured while deleting picture from entity')
+
+        return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=204)
+
+    @cors_http('GET', '/api/v1/query/referential/entity/picture/<string:entity_id>/<string:context>/<string:format>',
+               allowed_roles=('admin', 'write', 'read',), expected_exceptions=NotFound)
+    def referential_get_entity_picture(self, request, entity_id, context, format):
+        try:
+            entity = bson.json_util.loads(self.referential.get_entity_by_id(entity_id))
+        except:
+            raise NotFound('Entity {} not found'.format(entry_id))
+
+        try:
+            pic = self.referential.get_entity_picture(entity_id, context, format)
+        except:
+            raise NotFound('Picture ({}/{}) not found for entity {}'.format(context, format, entity_id))
+
+        if pic is None:
+            raise NotFound('Picture ({}/{}) not found for entity {}'.format(context, format, entity_id))            
+
+        return Response(pic, mimetype='image/png', status=200)
 
     @cors_http('POST', '/api/v1/command/referential/add_event', allowed_roles=('admin'), expected_exceptions=BadRequest)
     def referential_add_event(self, request):
