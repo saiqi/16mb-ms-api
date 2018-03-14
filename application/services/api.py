@@ -36,9 +36,14 @@ class CorsHttpRequestHandler(HttpRequestHandler):
         return response
 
     def response_from_exception(self, exc):
-        if isinstance(exc, self.expected_exceptions):
+        if isinstance(exc, self.expected_exceptions) or\
+        isinstance(exc, (Unauthorized, Forbidden, NotFound, BadRequest)):
             if isinstance(exc, NotFound):
                 status_code = 404
+            elif isinstance(exc, Unauthorized):
+                status_code = 401
+            elif isinstance(exc, Forbidden):
+                status_code = 403
             else:
                 status_code = 400
         else:
@@ -74,22 +79,24 @@ class HttpAuthenticatedRequestHandler(CorsHttpRequestHandler):
         super().__init__(method, url, expected_exceptions=expected_exceptions)
 
     def handle_request(self, request):
+        try:
+            if request.method != 'OPTIONS':
+                if not request.headers.get('Authorization'):
+                    raise Unauthorized('Unauthorized')
 
-        if request.method != 'OPTIONS':
-            if not request.headers.get('Authorization'):
-                raise Unauthorized()
+                token = request.headers.get('Authorization')
 
-            token = request.headers.get('Authorization')
+                try:
+                    payload = jwt.decode(token, self.container.config['SECRET_KEY'], algorithms='HS256')
+                except jwt.DecodeError:
+                    raise Unauthorized('Unauthorized')
+                except jwt.ExpiredSignatureError:
+                    raise Unauthorized('Unauthorized')
 
-            try:
-                payload = jwt.decode(token, self.container.config['SECRET_KEY'], algorithms='HS256')
-            except jwt.DecodeError:
-                raise Unauthorized()
-            except jwt.ExpiredSignatureError:
-                raise Unauthorized()
-
-            if payload['role'] not in self.allowed_roles:
-                raise Forbidden()
+                if payload['role'] not in self.allowed_roles:
+                    raise Forbidden('Forbidden')
+        except Exception as exc:
+            return self.response_from_exception(exc)
 
         return super(HttpAuthenticatedRequestHandler, self).handle_request(request)
 
