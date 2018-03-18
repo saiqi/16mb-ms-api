@@ -628,7 +628,9 @@ class ApiService(object):
             raise NotFound('Template not found')
 
         context = template['context']
-        picture_context = template['picture_context']
+        picture_context = template['picture']['context']
+        if 'picture' in data and 'context' in data['picture']:
+            picture_context = data['picture']['context']
 
         language = template['language']
         if 'language' in data:
