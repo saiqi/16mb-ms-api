@@ -517,7 +517,7 @@ class ApiService(object):
         return ApiService._get_display_name(entity, language)
 
     def _append_picture_into_referential_results(self, entry_id, referential_results, json_only, context, _format):
-        if 'picture' not in referential_results[entity_id]:
+        if 'picture' not in referential_results[entry_id]:
             referential_results[entity_id]['picture'] = {}
 
         if _format not in referential_results[entity_id]['picture']:
