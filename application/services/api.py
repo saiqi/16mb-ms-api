@@ -559,7 +559,7 @@ class ApiService(object):
             # referential_results[k]['logo'] = logo
         return results
 
-    def _get_query_parameters_and_append_pictures(self, q, user_parameters, referential_results, json_only, context):
+    def _get_query_parameters_and_append_pictures(self, q, current_query, user_parameters, referential_results, json_only, context):
         current_id = q['id']
         parameters = list()
         if current_query['parameters']:
@@ -651,10 +651,10 @@ class ApiService(object):
 
         query_results = dict()
         for q in template['queries']:
-            current_query = bson.json_util.loads(self.metadata.get_query(q['id']))
             query_results[q['id']] = dict()
+            current_query = bson.json_util.loads(self.metadata.get_query(q['id']))
             current_sql = current_query['sql']
-            parameters = self._get_query_parameters_and_append_pictures(q, user_parameters, referential_results, json_only, picture_context)
+            parameters = self._get_query_parameters_and_append_pictures(q, current_query, user_parameters, referential_results, json_only, picture_context)
             try:
                 current_results = bson.json_util.loads(self.datareader.select(current_sql, parameters))
             except:
