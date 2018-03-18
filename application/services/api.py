@@ -576,7 +576,7 @@ class ApiService(object):
                                 if 'format' not in ref[p]['picture']:
                                     raise BadRequest('Format not in picture configuration for referential parameter {}'.format(p))
                                 _format = ref[p]['picture']['format']
-                                self._append_picture_into_referential_results(entity_id, referential_results, json_only, context, _format)
+                                self._append_picture_into_referential_results(entry_id, referential_results, json_only, context, _format)
         return parameters
 
     def _labelize_row(self, row, q, language, context):
