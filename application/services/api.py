@@ -652,7 +652,7 @@ class ApiService(object):
         query_results = dict()
         for q in template['queries']:
             current_query = bson.json_util.loads(self.metadata.get_query(q['id']))
-            query_results[current_id] = dict()
+            query_results[q['id']] = dict()
             current_sql = current_query['sql']
             parameters = self._get_query_parameters_and_append_pictures(q, user_parameters, referential_results, json_only, picture_context)
             try:
