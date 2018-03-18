@@ -516,6 +516,108 @@ class ApiService(object):
 
         return ApiService._get_display_name(entity, language)
 
+    def _append_picture_into_referential_results(self, entry_id, referential_results, json_only, context, _format):
+        if 'picture' not in referential_results[entity_id]:
+            referential_results[entity_id]['picture'] = {}
+
+        if _format not in referential_results[entity_id]['picture']:
+            referential_results[entity_id]['picture'][_format] = None
+
+        if json_only is False:
+            picture = self.referential.get_entity_picture(entry_id, context, _format)
+            if not picture:
+                raise NotFound('Picture not found for referential entry: {} (context: {} / format: {})'.format(entry_id, context, _format))
+            referential_results[entity_id]['picture'][_format] = picture
+
+    def _handle_referential(self, referential, language, json_only):
+        results = dict()
+        for k,v in referential.items():
+            if 'id' not in v or 'event_or_entity' not in v:
+                raise BadRequest('Wrong formated referential entry (id and event_or_entity are mandatory)')
+            current_ref_str = None
+            if v['event_or_entity'] == 'entity':
+                current_ref_str = self.referential.get_entity_by_id(v['id'])
+            else:
+                current_ref_str = self.referential.get_event_by_id(v['id'])
+            if not current_ref_str:
+                raise NotFound('Referential entry not found: {}'.format(v['id']))
+            referential_results[k] = bson.json_util.loads(current_ref_str)
+            referential_results[k]['display_name'] = self._get_display_name(referential_results[k], language)
+            referential_results[k]['short_name'] = self._get_short_name(referential_results[k], language)
+            # picture = None
+            # if 'picture' in v and json_only is False:
+            #     pic_context = v['picture']['context']
+            #     pic_format = v['picture']['format']
+            #     picture = self.referential.get_entity_picture(v['id'], pic_context, pic_format)
+            #     if not picture:
+            #         raise NotFound('Picture not found for referential entry: {} (context: {} / format: {})'.format(v['id'], pic_context, pic_format))
+            # referential_results[k]['picture'] = picture
+            # logo = None
+            # if 'logo' in v and json_only is False:
+            #     logo = self.referential.get_entity_logo(v['id'], v['logo']['context'],
+            #                                            v['logo']['format'])
+            # referential_results[k]['logo'] = logo
+        return results
+
+    def _get_query_parameters_and_append_pictures(self, q, user_parameters, referential_results, json_only, context):
+        current_id = q['id']
+        current_query = bson.json_util.loads(self.metadata.get_query(q['id']))
+        query_results[current_id] = dict()
+        current_sql = current_query['sql']
+        parameters = list()
+        if current_query['parameters']:
+            for p in current_query['parameters']:
+                if user_parameters is not None:
+                    if current_id in user_parameters and p in user_parameters[current_id]:
+                        parameters.append(user_parameters[current_id][p])
+                if 'referential_parameters' in q and q['referential_parameters']:
+                    for ref in q['referential_parameters']:
+                        if p in ref:
+                            entry_id = referential_results[ref[p]['name']]['id']
+                            parameters.append(entry_id)
+                            if 'picture' in ref[p] and json_only is False:
+                                if 'format' not in ref[p]['picture']:
+                                    raise BadRequest('Format not in picture configuration for referential parameter {}'.format(p))
+                                _format = ref[p]['picture']['format']
+                                self._append_picture_into_referential_results(entity_id, referential_results, json_only, context, _format)
+        return parameters
+
+    def _labelize_row(self, row, q, language, context):
+        labelized_row = row.copy()
+        if 'labels' in q and q['labels']:
+            current_labels = q['labels']
+            for lab in current_labels:
+                if lab in row:
+                    if current_labels[lab] == 'entity':
+                        current_entity = bson.json_util.loads(self.referential.get_entity_by_id(row[lab]))
+                        labelized_row[lab] = current_entity['common_name']
+                    elif current_labels[lab] == 'label':
+                        current_label = self.referential.get_labels_by_id_and_language_and_context(row[lab], language, context)
+                        if current_label is None:
+                            raise BadRequest('Label {} not found'.format(row[lab]))
+                        labelized_row[lab] = current_label['label']
+        return labelized_row
+
+    def _append_referential_results(self, row, q, referential_results, json_only, context):
+        current_ref_config = q['referential_results']
+        for cfg in current_ref_config:
+            ref_pic = None
+            if current_ref_config[cfg]['event_or_entity'] == 'event':
+                current_ref_result = bson.json_util.loads(self.referential.get_event_by_id(row[cfg]))
+                if not current_ref_result:
+                    raise NotFound('Event {} not found'.format(row[cfg]))
+            else:
+                current_ref_result = bson.json_util.loads(self.referential.get_entity_by_id(row[cfg]))
+                if not current_ref_result:
+                    raise NotFound('Entity {} not found'.format(row[cfg]))
+                current_ref_result['display_name'] = self._get_display_name(current_ref_result, language)
+                current_ref_result['short_name'] = self._get_short_name(current_ref_result, language)
+            current_column_id = current_ref_config[cfg]['column_id']
+            referential_results[row[current_column_id]] = current_ref_result
+            if 'picture' in current_ref_config[cfg] and json_only is False:
+                self._append_picture_into_referential_results(row[cfg], referential_results, json_only, context,
+                    current_ref_config[cfg]['picture']['format'])
+
     @cors_http('POST', '/api/v1/query/metadata/template/resolve_with_ids/<string:template_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template_with_ids(self, request, template_id):
@@ -526,6 +628,7 @@ class ApiService(object):
             raise NotFound('Template not found')
 
         context = template['context']
+        picture_context = template['picture_context']
 
         language = template['language']
         if 'language' in data:
@@ -545,51 +648,11 @@ class ApiService(object):
 
         referential_results = dict()
         if referential is not None:
-            try:
-                for k,v in referential.items():
-                    current_ref_str = None
-                    if v['event_or_entity'] == 'entity':
-                        current_ref_str = self.referential.get_entity_by_id(v['id'])
-                    else:
-                        current_ref_str = self.referential.get_event_by_id(v['id'])
-                    if not current_ref_str:
-                        raise NotFound('Referential entry not found: {}'.format(v['id']))
-                    referential_results[k] = bson.json_util.loads(current_ref_str)
-                    referential_results[k]['display_name'] = self._get_display_name(referential_results[k], language)
-                    referential_results[k]['short_name'] = self._get_short_name(referential_results[k], language)
-                    picture = None
-                    if 'picture' in v and json_only is False:
-                        pic_context = v['picture']['context']
-                        pic_format = v['picture']['format']
-                        picture = self.referential.get_entity_picture(v['id'], pic_context, pic_format)
-                        if not picture:
-                            raise NotFound('Picture not found for referential entry: {} (context: {} / format: {})'.format(v['id'], pic_context, pic_format))
-                    referential_results[k]['picture'] = picture
-                    logo = None
-                    if 'logo' in v and json_only is False:
-                        logo = self.referential.get_entity_logo(v['id'], v['logo']['context'],
-                                                               v['logo']['format'])
-                    referential_results[k]['logo'] = logo
-            except Exception as e:
-                raise BadRequest(str(e))
+            referential_results = self._handle_referential(referential, language, json_only)
 
         query_results = dict()
-
         for q in template['queries']:
-            current_id = q['id']
-            current_query = bson.json_util.loads(self.metadata.get_query(q['id']))
-            query_results[current_id] = dict()
-            current_sql = current_query['sql']
-            parameters = list()
-            if current_query['parameters']:
-                for p in current_query['parameters']:
-                    if user_parameters is not None:
-                        if current_id in user_parameters and p in user_parameters[current_id]:
-                            parameters.append(user_parameters[current_id][p])
-                    if 'referential_parameters' in q and q['referential_parameters']:
-                        for ref in q['referential_parameters']:
-                            if p in ref:
-                                parameters.append(referential_results[ref[p]['name']]['id'])
+            parameters = self._get_query_parameters_and_append_pictures(q, user_parameters, referential_results, json_only, picture_context)
             try:
                 current_results = bson.json_util.loads(self.datareader.select(current_sql, parameters))
             except:
@@ -598,51 +661,9 @@ class ApiService(object):
                 raise BadRequest('Query {} returns nothing'.format(current_id))
             labelized_results = list()
             for row in current_results:
-                labelized_row = row.copy()
-                if 'labels' in q and q['labels']:
-                    current_labels = q['labels']
-                    for lab in current_labels:
-                        if lab in row:
-                            if current_labels[lab] == 'entity':
-                                current_entity = bson.json_util.loads(self.referential.get_entity_by_id(row[lab]))
-                                labelized_row[lab] = current_entity['common_name']
-                            elif current_labels[lab] == 'label':
-                                current_label = self.referential.get_labels_by_id_and_language_and_context(row[lab], language, context)
-                                if current_label is None:
-                                    raise BadRequest('Label {} not found'.format(row[lab]))
-                                labelized_row[lab] = current_label['label']
-                labelized_results.append(labelized_row)
+                labelized_results.append(self._labelize_row(row, q, language, context))
                 if 'referential_results' in q and q['referential_results']:
-                    current_ref_config = q['referential_results']
-                    for cfg in current_ref_config:
-                        ref_pic = None
-                        ref_logo = None
-                        if current_ref_config[cfg]['event_or_entity'] == 'event':
-                            current_ref_result = bson.json_util.loads(self.referential.get_event_by_id(row[cfg]))
-                            if not current_ref_result:
-                                raise NotFound('Event {} not found'.format(row[cfg]))
-                        else:
-                            current_ref_result = bson.json_util.loads(self.referential.get_entity_by_id(row[cfg]))
-                            if not current_ref_result:
-                                raise NotFound('Entity {} not found'.format(row[cfg]))
-                            current_ref_result['display_name'] = self._get_display_name(current_ref_result, language)
-                            current_ref_result['short_name'] = self._get_short_name(current_ref_result, language)
-                            if 'picture' in current_ref_config[cfg] and json_only is False:
-                                ref_pic = self.referential.get_entity_picture(
-                                    row[cfg], current_ref_config[cfg]['picture']['context'],
-                                    current_ref_config[cfg]['picture']['format'])
-                                if not ref_pic:
-                                    raise NotFound('Picture not found for referential entry: {} (context: {} / format: {})'.\
-                                        format(row[cfg], current_ref_config[cfg]['picture']['context'], current_ref_config[cfg]['picture']['format']))
-                            if 'logo' in current_ref_config[cfg] and json_only is False:
-                                ref_logo = self.referential.get_entity_logo(
-                                    row[cfg], current_ref_config[cfg]['logo']['context'],
-                                    current_ref_config[cfg]['logo']['format'])
-                        current_column_id = current_ref_config[cfg]['column_id']
-                        referential_results[row[current_column_id]] = current_ref_result
-                        referential_results[row[current_column_id]]['picture'] = ref_pic
-                        referential_results[row[current_column_id]]['logo'] = ref_logo
-
+                    self._append_referential_results(row, q, referential_results, picture_context)
             query_results[current_id] = labelized_results
         results = {'referential': referential_results, 'query': query_results}
         json_results = json.dumps(results, cls=DateEncoder)
