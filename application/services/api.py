@@ -516,18 +516,19 @@ class ApiService(object):
 
         return ApiService._get_display_name(entity, language)
 
-    def _append_picture_into_referential_results(self, entry_id, referential_results, json_only, context, _format):
-        if 'picture' not in referential_results[entry_id]:
-            referential_results[entity_id]['picture'] = {}
+    def _append_picture_into_referential_results(self, entry_key, referential_results, json_only, context, _format):
+        entry_id = referential_results[entry_key]['id']
+        if 'picture' not in referential_results[entry_key]:
+            referential_results[entry_key]['picture'] = {}
 
-        if _format not in referential_results[entity_id]['picture']:
-            referential_results[entity_id]['picture'][_format] = None
+        if _format not in referential_results[entry_key]['picture']:
+            referential_results[entry_key]['picture'][_format] = None
 
         if json_only is False:
             picture = self.referential.get_entity_picture(entry_id, context, _format)
             if not picture:
                 raise NotFound('Picture not found for referential entry: {} (context: {} / format: {})'.format(entry_id, context, _format))
-            referential_results[entity_id]['picture'][_format] = picture
+            referential_results[entry_key]['picture'][_format] = picture
 
     def _handle_referential(self, referential, language, json_only):
         results = dict()
@@ -576,7 +577,7 @@ class ApiService(object):
                                 if 'format' not in ref[p]['picture']:
                                     raise BadRequest('Format not in picture configuration for referential parameter {}'.format(p))
                                 _format = ref[p]['picture']['format']
-                                self._append_picture_into_referential_results(entry_id, referential_results, json_only, context, _format)
+                                self._append_picture_into_referential_results(ref[p]['name'], referential_results, json_only, context, _format)
         return parameters
 
     def _labelize_row(self, row, q, language, context):
@@ -612,7 +613,7 @@ class ApiService(object):
             current_column_id = current_ref_config[cfg]['column_id']
             referential_results[row[current_column_id]] = current_ref_result
             if 'picture' in current_ref_config[cfg] and json_only is False:
-                self._append_picture_into_referential_results(row[cfg], referential_results, json_only, context,
+                self._append_picture_into_referential_results(row[current_column_id], referential_results, json_only, context,
                     current_ref_config[cfg]['picture']['format'])
 
     @cors_http('POST', '/api/v1/query/metadata/template/resolve_with_ids/<string:template_id>',
