@@ -596,7 +596,7 @@ class ApiService(object):
                         labelized_row[lab] = current_label['label']
         return labelized_row
 
-    def _append_referential_results(self, row, q, referential_results, json_only, context):
+    def _append_referential_results(self, row, q, referential_results, json_only, context, language):
         current_ref_config = q['referential_results']
         for cfg in current_ref_config:
             ref_pic = None
@@ -666,7 +666,7 @@ class ApiService(object):
             for row in current_results:
                 labelized_results.append(self._labelize_row(row, q, language, context))
                 if 'referential_results' in q and q['referential_results']:
-                    self._append_referential_results(row, q, referential_results, json_only, picture_context)
+                    self._append_referential_results(row, q, referential_results, json_only, picture_context, language)
             query_results[current_id] = labelized_results
         results = {'referential': referential_results, 'query': query_results}
         json_results = json.dumps(results, cls=DateEncoder)
