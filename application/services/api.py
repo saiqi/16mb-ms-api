@@ -545,19 +545,6 @@ class ApiService(object):
             results[k] = bson.json_util.loads(current_ref_str)
             results[k]['display_name'] = self._get_display_name(results[k], language)
             results[k]['short_name'] = self._get_short_name(results[k], language)
-            # picture = None
-            # if 'picture' in v and json_only is False:
-            #     pic_context = v['picture']['context']
-            #     pic_format = v['picture']['format']
-            #     picture = self.referential.get_entity_picture(v['id'], pic_context, pic_format)
-            #     if not picture:
-            #         raise NotFound('Picture not found for referential entry: {} (context: {} / format: {})'.format(v['id'], pic_context, pic_format))
-            # referential_results[k]['picture'] = picture
-            # logo = None
-            # if 'logo' in v and json_only is False:
-            #     logo = self.referential.get_entity_logo(v['id'], v['logo']['context'],
-            #                                            v['logo']['format'])
-            # referential_results[k]['logo'] = logo
         return results
 
     def _get_query_parameters_and_append_pictures(self, q, current_query, user_parameters, referential_results, json_only, context):
@@ -672,7 +659,10 @@ class ApiService(object):
         json_results = json.dumps(results, cls=DateEncoder)
 
         if not json_only:
-            infography = self.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
+            try:
+                infography = self.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
+            except:
+                raise BadRequest('Wrong formated template !')
 
         if json_only is True:
             return Response(json_results, mimetype='application/json')
