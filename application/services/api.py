@@ -742,6 +742,9 @@ class ApiService(object):
                                 'truncate_insert', 'truncate_bulk_insert'):
             raise BadRequest('Wrong value for parameter write_policy')
 
+        if write_policy in ('bulk_insert', 'delete_bulk_insert', 'truncate_bulk_insert') and 'chunk_size' not in data:
+            raise BadRequest('Bulk loading strategy needs a chunk size')
+
         try:
             meta = list(map(tuple, data['meta']))
         except:
@@ -753,19 +756,19 @@ class ApiService(object):
             elif write_policy == 'upsert':
                 self.datastore.upsert(data['target_table'], data['upsert_key'], data['records'], meta)
             elif write_policy == 'bulk_insert':
-                self.datastore.bulk_insert(data['target_table'], data['records'], meta)
+                self.datastore.bulk_insert(data['target_table'], data['records'], meta, chunk_size=data['chunk_size'])
             elif write_policy == 'delete_insert':
                 self.datastore.delete(data['target_table'], data['delete_keys'])
                 self.datastore.insert(data['target_table'], data['records'], meta)
             elif write_policy == 'delete_bulk_insert':
                 self.datastore.delete(data['target_table'], data['delete_keys'])
-                self.datastore.bulk_insert(data['target_table'], data['records'], meta)
+                self.datastore.bulk_insert(data['target_table'], data['records'], meta, chunk_size=data['chunk_size'])
             elif write_policy == 'truncate_insert':
                 self.datastore.truncate(data['target_table'])
                 self.datastore.insert(data['target_table'], data['records'], meta)
             else:
                 self.datastore.truncate(data['target_table'])
-                self.datastore.bulk_insert(data['target_table'], data['records'], meta)
+                self.datastore.bulk_insert(data['target_table'], data['records'], meta, chunk_size=data['chunk_size'])
         except:
             raise BadRequest('An error occured while writing in datastore')
 
