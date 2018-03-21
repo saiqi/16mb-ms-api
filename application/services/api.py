@@ -490,11 +490,18 @@ class ApiService(object):
                 raise BadRequest('Request arguments are mismatching expected query parameters')
             params = [data[p] for p in query['parameters']]
 
+        limit = 50
+        if 'limit' in data:
+            try:
+                limit = int(data['limit'])
+            except:
+                raise BadRequest('Limit has to be an integer')
+
         try:
             if params is not None:
-                result = bson.json_util.loads(self.datareader.select(query['sql'], params))
+                result = bson.json_util.loads(self.datareader.select(query['sql'], params, limit=limit))
             else:
-                result = bson.json_util.loads(self.datareader.select(query['sql']))
+                result = bson.json_util.loads(self.datareader.select(query['sql'], limit=limit))
         except:
             raise BadRequest('An error occurred while executing query')
 
