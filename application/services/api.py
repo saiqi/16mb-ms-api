@@ -121,6 +121,7 @@ class ApiService(object):
     referential = RpcProxy('referential')
     svg_builder = RpcProxy('svg_builder')
     crontask = RpcProxy('crontask')
+    subscription = RpcProxy('subscription_manager')
 
     def _handle_request_data(self, request):
         if not request.get_data():
@@ -133,7 +134,11 @@ class ApiService(object):
 
         return json_data
 
-    @cors_http('POST', '/api/v1/command/opta/add_f1', allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    def _get_user_from_request(self, request):
+        user = jwt.decode(request.headers.get('Authorization'), verify=False)
+        return user['sub']
+
+    @cors_http('POST', '/api/v1/command/opta/add_f1', allowed_roles=('admin',), expected_exceptions=BadRequest)
     def opta_add_f1(self, request):
         data = self._handle_request_data(request)
         try:
@@ -143,7 +148,7 @@ class ApiService(object):
 
         return Response(json.dumps(data), mimetype='application/json', status=201)
 
-    @cors_http('GET', '/api/v1/query/opta/f1/<string:game_id>', allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    @cors_http('GET', '/api/v1/query/opta/f1/<string:game_id>', allowed_roles=('admin',), expected_exceptions=BadRequest)
     def opta_get_f1(self, request, game_id):
         try:
             game = self.opta_collector.get_f1(game_id)
@@ -157,7 +162,7 @@ class ApiService(object):
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
-    @cors_http('POST', '/api/v1/command/opta/update_all_f1', allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
+    @cors_http('POST', '/api/v1/command/opta/update_all_f1', allowed_roles=('admin',), expected_exceptions=BadRequest)
     def opta_update_all_f1(self, request):
         try:
             self.opta_collector.update_all_f1()
@@ -165,7 +170,7 @@ class ApiService(object):
             raise BadRequest('An error occured while updating Opta F1 files')
         return Response(json.dumps({'status': 'OK'}), mimetype='application/json', status=201)
 
-    @cors_http('GET', '/api/v1/query/opta/f9/<string:game_id>', allowed_roles=('admin', 'write',),
+    @cors_http('GET', '/api/v1/query/opta/f9/<string:game_id>', allowed_roles=('admin',),
                expected_exceptions=(BadRequest, NotFound))
     def opta_get_f9(self, request, game_id):
         try:
@@ -180,7 +185,7 @@ class ApiService(object):
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
-    @cors_http('GET', '/api/v1/query/opta/soccer_ids/<string:start>/<string:end>', allowed_roles=('admin', 'write',),
+    @cors_http('GET', '/api/v1/query/opta/soccer_ids/<string:start>/<string:end>', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def get_opta_soccer_ids(self, request, start, end):
         try:
@@ -209,7 +214,7 @@ class ApiService(object):
 
         return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
 
-    @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin', 'write',),
+    @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def opta_add_ru1(self, request):
         data = self._handle_request_data(request)
@@ -220,7 +225,7 @@ class ApiService(object):
 
         return Response(json.dumps(data), mimetype='application/json', status=201)
 
-    @cors_http('GET', '/api/v1/query/opta/ru1/<string:game_id>', allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    @cors_http('GET', '/api/v1/query/opta/ru1/<string:game_id>', allowed_roles=('admin',), expected_exceptions=BadRequest)
     def opta_get_ru1(self, request, game_id):
         try:
             game = self.opta_collector.get_ru1(game_id)
@@ -234,7 +239,7 @@ class ApiService(object):
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
-    @cors_http('POST', '/api/v1/command/opta/update_all_ru1', allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
+    @cors_http('POST', '/api/v1/command/opta/update_all_ru1', allowed_roles=('admin',), expected_exceptions=BadRequest)
     def opta_update_all_ru1(self, request):
         try:
             self.opta_collector.update_all_ru1()
@@ -242,7 +247,7 @@ class ApiService(object):
             raise BadRequest('An error occured while updating Opta RU1 files')
         return Response(json.dumps({'status': 'OK'}), mimetype='application/json', status=201)
 
-    @cors_http('GET', '/api/v1/query/opta/ru7/<string:game_id>', allowed_roles=('admin', 'write',),
+    @cors_http('GET', '/api/v1/query/opta/ru7/<string:game_id>', allowed_roles=('admin',),
                expected_exceptions=(BadRequest, NotFound))
     def opta_get_ru7(self, request, game_id):
         try:
@@ -257,7 +262,7 @@ class ApiService(object):
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
-    @cors_http('GET', '/api/v1/query/opta/rugby_ids/<string:start>/<string:end>', allowed_roles=('admin', 'write',),
+    @cors_http('GET', '/api/v1/query/opta/rugby_ids/<string:start>/<string:end>', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def get_opta_rugby_ids(self, request, start, end):
         try:
@@ -285,6 +290,25 @@ class ApiService(object):
             raise BadRequest('An error occured while unacknowledging Opta RU7')
 
         return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
+
+    @cors_http('POST', '/api/v1/command/subscription/add', allowed_roles=('admin'), expected_exceptions=BadRequest)
+    def subscription_add(self, request):
+        data = self._handle_request_data(request)
+        try:
+            self.subscription.add_subscription(**data)
+        except:
+            raise BadRequest('An error occurred while adding subscription')
+        return Response(json.dumps({'user': data['user']}), mimetype='application/json', status=201)
+
+    @cors_http('GET', '/api/v1/query/subscription/<string:user>', allowed_roles=('admin'), 
+        expected_exceptions=(NotFound, BadRequest))
+    def subscription_get(self, request, user):
+        sub = bson.json_util.loads(self.subscription.get_subscription_by_user(user))
+
+        if not sub:
+            raise NotFound('Subscription not found for user {}'.format(user))
+
+        return Response(json.dumps(sub, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/metadata/add_transformation', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
@@ -351,7 +375,7 @@ class ApiService(object):
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
-    @cors_http('POST', '/api/v1/command/metadata/add_query', allowed_roles=('admin', 'write',),
+    @cors_http('POST', '/api/v1/command/metadata/add_query', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
     def metadata_add_query(self, request):
         data = self._handle_request_data(request)
@@ -363,7 +387,7 @@ class ApiService(object):
         return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
 
     @cors_http('DELETE', '/api/v1/command/metadata/delete_query/<string:query_id>',
-               allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+               allowed_roles=('admin',), expected_exceptions=BadRequest)
     def metadata_delete_query(self, request, query_id):
         try:
             self.metadata.delete_query(query_id)
@@ -372,7 +396,7 @@ class ApiService(object):
 
         return Response(json.dumps({'id': query_id}), mimetype='application/json', status=204)
 
-    @cors_http('GET', '/api/v1/query/metadata/queries', allowed_roles=('admin', 'write', 'read',),
+    @cors_http('GET', '/api/v1/query/metadata/queries', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
     def metatdata_get_all_queries(self, request):
         try:
@@ -382,7 +406,7 @@ class ApiService(object):
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
-    @cors_http('GET', '/api/v1/query/metadata/query/<string:query_id>', allowed_roles=('admin', 'write', 'read',),
+    @cors_http('GET', '/api/v1/query/metadata/query/<string:query_id>', allowed_roles=('admin', 'write',),
                expected_exceptions=(BadRequest, NotFound))
     def metadata_get_query(self, request, query_id):
         try:
@@ -419,12 +443,13 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/metadata/templates', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def metatdata_get_all_templates(self, request):
+        user = self._get_user_from_request(request)
         try:
             if 'bundle' in request.args:
                 bundle = request.args['bundle']
-                result = bson.json_util.loads(self.metadata.get_templates_by_bundle(bundle))
+                result = bson.json_util.loads(self.metadata.get_templates_by_bundle(bundle, user))
             else:
-                result = bson.json_util.loads(self.metadata.get_all_templates())
+                result = bson.json_util.loads(self.metadata.get_all_templates(user))
         except:
             raise BadRequest('An error occurred while retrieving all templates')
 
@@ -433,8 +458,9 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/metadata/template/<string:template_id>', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=(BadRequest, NotFound))
     def metadata_get_template(self, request, template_id):
+        user = self._get_user_from_request(request)
         try:
-            result = bson.json_util.loads(self.metadata.get_template(template_id))
+            result = bson.json_util.loads(self.metadata.get_template(template_id, user))
         except:
             raise BadRequest('An error occurred while retrieving template: {}'.format(template_id))
 
@@ -444,7 +470,7 @@ class ApiService(object):
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/metadata/template/add_query/<string:template_id>',
-               allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
+               allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
     def metadata_add_query_to_template(self, request, template_id):
         data = self._handle_request_data(request)
         try:
@@ -455,7 +481,7 @@ class ApiService(object):
         return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
 
     @cors_http('DELETE', '/api/v1/command/metadata/template/delete_query/<string:template_id>/<string:query_id>',
-               allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
+               allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
     def metadata_delete_query_from_template(self, request, template_id, query_id):
         try:
             self.metadata.delete_query_from_template(template_id, query_id)
@@ -465,7 +491,7 @@ class ApiService(object):
         return Response(json.dumps({'id': template_id}), mimetype='application/json', status=204)
 
     @cors_http('POST', '/api/v1/command/metadata/template/update_svg/<string:template_id>',
-               allowed_roles=('admin', 'write', 'read',), expected_exceptions=BadRequest)
+               allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
     def metadata_update_svg_in_template(self, request, template_id):
         data = self._handle_request_data(request)
         try:
@@ -476,7 +502,7 @@ class ApiService(object):
         return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
 
     @cors_http('POST', '/api/v1/query/metadata/query/resolve/<string:query_id>',
-               allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
+               allowed_roles=('admin', 'write',), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_query(self, request, query_id):
         data = self._handle_request_data(request)
         query = bson.json_util.loads(self.metadata.get_query(query_id))
@@ -606,8 +632,9 @@ class ApiService(object):
     @cors_http('POST', '/api/v1/query/metadata/template/resolve_with_ids/<string:template_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template_with_ids(self, request, template_id):
+        user = self._get_user_from_request(request)
         data = self._handle_request_data(request)
-        template = bson.json_util.loads(self.metadata.get_template(template_id))
+        template = bson.json_util.loads(self.metadata.get_template(template_id, user))
 
         if template is None:
             raise NotFound('Template not found')
@@ -808,7 +835,6 @@ class ApiService(object):
                 raise BadRequest('An error occured while computing transformation {}'.format(t['id']))
             self.metadata.update_process_date(t['id'])
 
-
     @cors_http('POST', '/api/v1/command/datastore/update_transformations', allowed_roles=('admin'),
                expected_exceptions=BadRequest)
     def datastore_update_transformations(self, request):
@@ -932,13 +958,14 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/referential/entity/picture/<string:entity_id>/<string:context>/<string:format>',
                allowed_roles=('admin', 'write', 'read',), expected_exceptions=NotFound)
     def referential_get_entity_picture(self, request, entity_id, context, format):
+        user = self._get_user_from_request(request)
         try:
-            entity = bson.json_util.loads(self.referential.get_entity_by_id(entity_id))
+            entity = bson.json_util.loads(self.referential.get_entity_by_id(entity_id, user))
         except:
             raise NotFound('Entity {} not found'.format(entry_id))
 
         try:
-            pic = self.referential.get_entity_picture(entity_id, context, format)
+            pic = self.referential.get_entity_picture(entity_id, context, format, user)
         except:
             raise NotFound('Picture ({}/{}) not found for entity {}'.format(context, format, entity_id))
 
@@ -959,7 +986,8 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/referential/entity/<string:entity_id>', allowed_roles=('admin', 'write', 'read'),
                expected_exceptions=(BadRequest, NotFound))
     def referential_get_entity_by_id(self, request, entity_id):
-        entity = bson.json_util.loads(self.referential.get_entity_by_id(entity_id))
+        user = self._get_user_from_request(request)
+        entity = bson.json_util.loads(self.referential.get_entity_by_id(entity_id, user))
 
         if not entity:
             raise NotFound('Entity not found')
@@ -969,7 +997,8 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/referential/event/<string:event_id>', allowed_roles=('admin', 'write', 'read'),
                expected_exceptions=(BadRequest, NotFound))
     def referential_get_event_by_id(self, request, event_id):
-        event = bson.json_util.loads(self.referential.get_event_by_id(event_id))
+        user = self._get_user_from_request(request)
+        event = bson.json_util.loads(self.referential.get_event_by_id(event_id, user))
 
         if not event:
             raise NotFound('Event not found')
@@ -979,6 +1008,7 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/referential/search_entity', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def referential_search_entity(self, request):
+        user = self._get_user_from_request(request)
         if 'name' not in request.args:
             raise BadRequest('No name in request s arguments')
 
@@ -993,7 +1023,7 @@ class ApiService(object):
             provider = request.args['provider']
 
         try:
-            entities = bson.json_util.loads(self.referential.search_entity(name, type=type, provider=provider))
+            entities = bson.json_util.loads(self.referential.search_entity(name, user, type=type, provider=provider))
         except:
             raise BadRequest('An error occured while searching entity')
 
@@ -1002,6 +1032,7 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/referential/search_event', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def referential_search_event(self, request):
+        user = self._get_user_from_request(request)
         if 'name' not in request.args:
             raise BadRequest('No name in request s arguments')
 
@@ -1021,7 +1052,7 @@ class ApiService(object):
             provider = request.args['provider']
 
         try:
-            events = bson.json_util.loads(self.referential.search_event(name, date, type=type, provider=provider))
+            events = bson.json_util.loads(self.referential.search_event(name, date, user, type=type, provider=provider))
         except:
             raise BadRequest('An error occured while searching event')
 
@@ -1052,6 +1083,7 @@ class ApiService(object):
     @cors_http('GET', '/api/v1/query/referential/search', allowed_roles=('admin', 'write', 'read'),
                expected_exceptions=BadRequest)
     def referential_fuzzy_search(self, request):
+        user = self._get_user_from_request(request)
         if 'query' not in request.args:
             raise BadRequest('No query in request s arguments')
         query = request.args['query']
@@ -1064,5 +1096,5 @@ class ApiService(object):
             raise BadRequest('No provider in request s arguments')
         provider = request.args['provider']
 
-        results = bson.json_util.loads(self.referential.fuzzy_search(query, type, provider))
+        results = bson.json_util.loads(self.referential.fuzzy_search(query, user, type, provider))
         return Response(json.dumps(results), mimetype='application/json')
