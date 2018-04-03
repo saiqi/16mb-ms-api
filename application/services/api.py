@@ -679,7 +679,7 @@ class ApiService(object):
                 raise BadRequest('Query {} returns nothing'.format(current_id))
             labelized_results = list()
             for row in current_results:
-                labelized_results.append(self._labelize_row(row, q, language, context))
+                labelized_results.append(self._labelize_row(row, q, language, context, user))
                 if 'referential_results' in q and q['referential_results']:
                     self._append_referential_results(row, q, referential_results, json_only, picture_context, language, user)
             query_results[q['id']] = labelized_results
