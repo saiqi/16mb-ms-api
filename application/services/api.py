@@ -1111,8 +1111,6 @@ class ApiService(object):
         if 'filename' not in data:
             raise BadRequest('Missing filename in request data')
         filename = data['filename']
-        if 'type' not in _format:
-            raise BadRequest('Type is mandatory in format config')
         if 'svg' not in data:
             raise BadRequest('Missing svg in request data')
         svg = data['svg']
@@ -1130,7 +1128,7 @@ class ApiService(object):
             if args:
                 self.exporter.export(svg, filename, export_config, **args)
             else:
-                self.exporter.export(svg, filename, export_config, **args)
+                self.exporter.export(svg, filename, export_config)
         except:
             raise BadRequest('An error occured while exporting SVG string')
 
