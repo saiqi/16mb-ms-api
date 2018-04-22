@@ -122,6 +122,7 @@ class ApiService(object):
     svg_builder = RpcProxy('svg_builder')
     crontask = RpcProxy('crontask')
     subscription = RpcProxy('subscription_manager')
+    exporter = RpcProxy('exporter')
 
     def _handle_request_data(self, request):
         if not request.get_data():
@@ -1098,3 +1099,39 @@ class ApiService(object):
 
         results = bson.json_util.loads(self.referential.fuzzy_search(query, user, type, provider))
         return Response(json.dumps(results), mimetype='application/json')
+
+    @cors_http('POST', '/api/v1/command/export', allowed_roles=('admin', 'write', 'read'), expected_exceptions=BadRequest)
+    def exporter_export(self, request):
+        data = self._handle_request_data(request)
+        user = self._get_user_from_request(request)
+        sub = bson.json_util.loads(self.subscription.get_subscription_by_user(user))
+        if 'export' not in sub['subscription']:
+            raise BadRequest('Export not configured for user {}'.format(user))
+        export_config = sub['subscription']['export']
+        if 'filename' not in data:
+            raise BadRequest('Missing filename in request data')
+        filename = data['filename']
+        if 'type' not in _format:
+            raise BadRequest('Type is mandatory in format config')
+        if 'svg' not in data:
+            raise BadRequest('Missing svg in request data')
+        svg = data['svg']
+        args = {}
+        if 'format' in data:
+            if 'type' in data['format']:
+                args['_format'] = data['format']['type']
+            if 'dpi' in data['format']:
+                args['dpi'] = data['format']['dpi']
+            if 'height' in data['format']:
+                args['height'] = data['format']['height']
+            if 'width' in data['format']:
+                args['width'] = data['format']['width']
+        try:
+            if args:
+                self.exporter.export(svg, filename, export_config, **args)
+            else:
+                self.exporter.export(svg, filename, export_config, **args)
+        except:
+            raise BadRequest('An error occured while exporting SVG string')
+
+        return Response(json.dumps({'status': 'OK'}), mimetype='application/json', status=201)
