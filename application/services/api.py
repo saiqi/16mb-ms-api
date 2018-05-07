@@ -1006,6 +1006,17 @@ class ApiService(object):
 
         return Response(json.dumps(event, cls=DateEncoder), mimetype='application/json')
 
+    @cors_http('GET', '/api/v1/query/referential/events/<string:start_date>/<string:end_date>', allowed_roles=('admin', 'write', 'read'),
+        expected_exceptions=BadRequest)
+    def referential_get_events_between_dates(self, request, start_date, end_date):
+        user = self._get_user_from_request(request)
+        try:
+            events = bson.json_util.loads(self.referential.get_events_between_dates(start_date, end_date, user))
+        except:
+            raise BadRequest('An error occured while retrieving events between {} and {}'.format(start_date, end_date))
+            
+        return Response(json.dumps(events, cls=DateEncoder), mimetype='application/json')
+
     @cors_http('GET', '/api/v1/query/referential/search_entity', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def referential_search_entity(self, request):
