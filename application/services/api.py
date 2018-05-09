@@ -468,6 +468,9 @@ class ApiService(object):
         if result is None:
             raise NotFound('Template not found')
 
+        if result['svg']:
+            result['preview'] = self.exporter.text_to_path(result['svg'])
+
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/metadata/template/add_query/<string:template_id>',
