@@ -690,16 +690,17 @@ class ApiService(object):
         results = {'referential': referential_results, 'query': query_results}
         json_results = json.dumps(results, cls=DateEncoder)
 
-        if not json_only:
-            try:
-                infography = self.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
-            except:
-                raise BadRequest('Wrong formated template !')
-
         if json_only is True:
             return Response(json_results, mimetype='application/json')
 
-        return Response(infography, mimetype='image/svg+xml')
+        try:
+            infography = self.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
+        except:
+            raise BadRequest('Wrong formated template !')
+
+        result = self.exporter.text_to_path(infography)
+
+        return Response(result, mimetype='image/svg+xml')
 
     @cors_http('POST', '/api/v1/command/crontask/update_opta_soccer', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
