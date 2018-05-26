@@ -761,6 +761,23 @@ class ApiService(object):
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json', status=200)
 
+    @cors_http('GET', '/api/v1/query/datareader/select', allowed_roles=('admin'), expected_exceptions=BadRequest)
+    def datareader_select(self, request):
+        args = request.args
+
+        if 'query' not in args:
+            raise BadRequest('Missing query argument')
+        query = args['query']
+
+        limit = 50 if 'limit' not in args else int(args['limit'])
+
+        try:
+            result = bson.json_util.loads(self.datareader.select(query, limit=limit))
+        except:
+            raise BadRequest('An error occured while performing query {}'.format(query))
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json', status=200)
+
     @cors_http('POST', '/api/v1/command/datastore/write', allowed_roles=('admin'),
                expected_exceptions=BadRequest)
     def datastore_write(self, request):
