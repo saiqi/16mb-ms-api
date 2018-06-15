@@ -1121,13 +1121,13 @@ class ApiService(object):
             raise BadRequest('No query in request s arguments')
         query = request.args['query']
 
-        if 'type' not in request.args:
-            raise BadRequest('No type in request s arguments')
-        type = request.args['type']
+        type = None
+        if 'type' in request.args:
+            type = request.args['type']
 
-        if 'provider' not in request.args:
-            raise BadRequest('No provider in request s arguments')
-        provider = request.args['provider']
+        provider = None
+        if 'provider' in request.args:
+            provider = request.args['provider']
 
         results = bson.json_util.loads(self.referential.fuzzy_search(query, user, type, provider))
         return Response(json.dumps(results), mimetype='application/json')
