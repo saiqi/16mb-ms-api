@@ -546,6 +546,16 @@ class ApiService(object):
 
         return ApiService._get_display_name(entity, language)
 
+    @staticmethod
+    def _get_multiline_name(entity, language):
+        if 'multiline' in entity and entity['multiline']:
+            return entity['multiline']
+        if 'informations' in entity and entity['informations']\
+        and 'last_name' in entity['informations'] and 'first_name' in entity['informations']:
+            return {'first_name': entity['informations']['first_name'], 'last_name': entity['informations']['last_name']}
+        return {'first_name': '', 'last_name': ApiService._get_display_name(entity, language)}
+
+
     def _append_picture_into_referential_results(self, entry_key, referential_results, json_only, context, _format, user):
         entry_id = referential_results[entry_key]['id']
         if 'picture' not in referential_results[entry_key]:
@@ -575,6 +585,7 @@ class ApiService(object):
             results[k] = bson.json_util.loads(current_ref_str)
             results[k]['display_name'] = self._get_display_name(results[k], language)
             results[k]['short_name'] = self._get_short_name(results[k], language)
+            results[k]['multiline_name'] = self._get_multiline_name(results[k], language)
         return results
 
     def _get_query_parameters_and_append_pictures(self, q, current_query, user_parameters, referential_results, json_only, context, user):
