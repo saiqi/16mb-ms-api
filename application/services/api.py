@@ -638,6 +638,7 @@ class ApiService(object):
                     raise NotFound('Entity {} not found'.format(row[cfg]))
                 current_ref_result['display_name'] = self._get_display_name(current_ref_result, language)
                 current_ref_result['short_name'] = self._get_short_name(current_ref_result, language)
+                current_ref_result['multiline_name'] = self._get_multiline_name(current_ref_result, language)
             current_column_id = current_ref_config[cfg]['column_id']
             referential_results[row[current_column_id]] = current_ref_result
             if 'picture' in current_ref_config[cfg] and json_only is False:
