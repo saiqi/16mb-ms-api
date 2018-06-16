@@ -957,6 +957,16 @@ class ApiService(object):
             raise BadRequest('An error occured while adding translation to entity')
         return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
 
+    @cors_http('POST', '/api/v1/command/referential/add_multiline_to_entity/<string:entity_id>', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
+    def referential_add_multiline_to_entity(self, request, entity_id):
+        data = self._handle_request_data(request)
+        try:
+            self.referential.add_multiline_to_entity(entity_id, data['multiline'])
+        except:
+            raise BadRequest('An error occured while adding translation to entity')
+        return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
+
     @cors_http('POST', '/api/v1/command/referential/add_picture_to_entity/<string:entity_id>', allowed_roles=('admin', 'write'),
                expected_exceptions=BadRequest)
     def referential_add_picture_to_entity(self, request, entity_id):
