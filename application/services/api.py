@@ -1167,17 +1167,21 @@ class ApiService(object):
         filename = data['filename']
         if 'svg' not in data:
             raise BadRequest('Missing svg in request data')
+        if 'format' not in data:
+            raise BadRequest('Missing format in request data')
+        _format = data['format']
+        if 'type' not in _format:
+            raise BadRequest('Missing type in format dict in request data')
+        if not filename.lower().endswith(_format['type'].lower()):
+            raise BadRequest('Wrong filename extension {} was expected'.format(_format['type']))
         svg = data['svg']
         args = {}
-        if 'format' in data:
-            if 'type' in data['format']:
-                args['_format'] = data['format']['type']
-            if 'dpi' in data['format']:
-                args['dpi'] = data['format']['dpi']
-            if 'height' in data['format']:
-                args['height'] = data['format']['height']
-            if 'width' in data['format']:
-                args['width'] = data['format']['width']
+        if 'dpi' in _format:
+            args['dpi'] = _format['dpi']
+        if 'height' in _format:
+            args['height'] = _format['height']
+        if 'width' in _format:
+            args['width'] = _format['width']
         try:
             if args:
                 self.exporter.export(svg, filename, export_config, **args)
