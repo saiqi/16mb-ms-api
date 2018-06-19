@@ -1178,10 +1178,6 @@ class ApiService(object):
         args = {}
         if 'dpi' in _format:
             args['dpi'] = _format['dpi']
-        if 'height' in _format:
-            args['height'] = _format['height']
-        if 'width' in _format:
-            args['width'] = _format['width']
         try:
             if args:
                 self.exporter.export(svg, filename, export_config, **args)
