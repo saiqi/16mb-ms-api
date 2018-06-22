@@ -1153,7 +1153,7 @@ class ApiService(object):
 
         limit = -1
         if 'limit' in request.args:
-            limit = request.args['limit']
+            limit = int(request.args['limit'])
 
         results = bson.json_util.loads(self.referential.fuzzy_search(query, user, type, provider, limit))
         return Response(json.dumps(results), mimetype='application/json')
