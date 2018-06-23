@@ -1060,6 +1060,20 @@ class ApiService(object):
             
         return Response(json.dumps(events, cls=DateEncoder), mimetype='application/json')
 
+    @cors_http('GET', '/api/v1/query/referential/events/<string:entity_id>', allowed_roles=('admin', 'write', 'read'),
+        expected_exceptions=BadRequest)
+    def referential_get_events_by_entity_id(self, request, entity_id):
+        user = self._get_user_from_request(request)
+        limit  = -1
+        if 'limit' in request.args:
+            limit = int(request.args['limit'])
+        try:
+            events = bson.json_util.loads(self.referential.get_events_by_entity_id(entity_id, user, limit))
+        except:
+            raise BadRequest('An error occured while retrieving events for entity_id'.format(entity_id))
+            
+        return Response(json.dumps(events, cls=DateEncoder), mimetype='application/json')
+
     @cors_http('GET', '/api/v1/query/referential/search_entity', allowed_roles=('admin', 'write', 'read',),
                expected_exceptions=BadRequest)
     def referential_search_entity(self, request):
