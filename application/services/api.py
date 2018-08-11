@@ -1198,10 +1198,10 @@ class ApiService(object):
             args['dpi'] = _format['dpi']
         try:
             if args:
-                self.exporter.export(svg, filename, export_config, **args)
+                url = self.exporter.export(svg, filename, export_config, **args)
             else:
-                self.exporter.export(svg, filename, export_config)
+                url = self.exporter.export(svg, filename, export_config)
         except:
             raise BadRequest('An error occured while exporting SVG string')
 
-        return Response(json.dumps({'status': 'OK'}), mimetype='application/json', status=201)
+        return Response(json.dumps({'url': url}), mimetype='application/json', status=201)
