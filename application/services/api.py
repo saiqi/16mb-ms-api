@@ -710,9 +710,9 @@ class ApiService(object):
         except:
             raise BadRequest('Wrong formated template !')
 
-        result = self.exporter.text_to_path(infography)
+        # result = self.exporter.text_to_path(infography)
 
-        return Response(result, mimetype='image/svg+xml')
+        return Response(infography, mimetype='image/svg+xml')
 
     @cors_http('POST', '/api/v1/command/crontask/update_opta_soccer', allowed_roles=('admin',),
                expected_exceptions=BadRequest)
