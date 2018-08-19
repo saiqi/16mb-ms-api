@@ -420,6 +420,27 @@ class ApiService(object):
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
+    @cors_http('POST', '/api/v1/command/metadata/add_trigger', allowed_roles=('admin',),
+               expected_exceptions=BadRequest)
+    def metadata_add_trigger(self, request):
+        data = self._handle_request_data(request)
+        try:
+            self.metadata.add_trigger(**data)
+        except:
+            raise BadRequest('An error occurred while adding trigger')
+
+        return Response(json.dumps({'id': data['_id']}), mimetype='application/json', status=201)
+
+    @cors_http('DELETE', '/api/v1/command/metadata/delete_trigger/<string:trigger_id>',
+               allowed_roles=('admin',), expected_exceptions=BadRequest)
+    def metadata_delete_trigger(self, request, trigger_id):
+        try:
+            self.metadata.delete_trigger(trigger_id)
+        except:
+            raise BadRequest('An error occurred while deleting trigger: {}'.format(trigger_id))
+
+        return Response(json.dumps({'id': trigger_id}), mimetype='application/json', status=204)
+
     @cors_http('POST', '/api/v1/command/metadata/add_template', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
     def metadata_add_template(self, request):
@@ -645,6 +666,9 @@ class ApiService(object):
                 self._append_picture_into_referential_results(row[current_column_id], referential_results, json_only, context,
                     current_ref_config[cfg]['picture']['format'], user)
 
+    def _get_template_data(self):
+        pass
+
     @cors_http('POST', '/api/v1/query/metadata/template/resolve_with_ids/<string:template_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_template_with_ids(self, request, template_id):
@@ -722,43 +746,6 @@ class ApiService(object):
             return Response(result, mimetype='image/svg+xml')
 
         return Response(infography, mimetype='image/svg+xml')
-
-    @cors_http('POST', '/api/v1/command/crontask/update_opta_soccer', allowed_roles=('admin',),
-               expected_exceptions=BadRequest)
-    def crontask_update_opta_soccer(self, request):
-        data = self._handle_request_data(request)
-        try:
-            self.crontask.update_opta_soccer(**data)
-        except:
-            raise BadRequest('An error occurred while submitting update opta soccer task')
-
-        return Response(json.dumps(data), mimetype='application/json', status=201)
-
-    @cors_http('POST', '/api/v1/command/crontask/update_opta_rugby', allowed_roles=('admin',),
-               expected_exceptions=BadRequest)
-    def crontask_update_opta_rugby(self, request):
-        data = self._handle_request_data(request)
-        try:
-            self.crontask.update_opta_rugby(**data)
-        except:
-            raise BadRequest('An error occurred while submitting update opta rugby task')
-
-        return Response(json.dumps(data), mimetype='application/json', status=201)
-
-    @cors_http('GET', '/api/v1/query/crontask/logs', allowed_roles=('admin',), expected_exceptions=BadRequest)
-    def crontask_get_logs(self, request):
-        method_name = None
-        if 'method_name' in request.args:
-            method_name = request.args['method_name']
-        tail = 10
-        if 'tail' in request.args:
-            tail = int(request.args['tail'])
-        try:
-            raw_logs = bson.json_util.loads(self.crontask.get_logs(tail=tail, method_name=method_name))
-        except:
-            raise BadRequest('An error occurred while retrieving crontask logs')
-
-        return Response(json.dumps(raw_logs, cls=DateEncoder), mimetype='application/json')
 
     @cors_http('POST', '/api/v1/command/datastore/create_table', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
