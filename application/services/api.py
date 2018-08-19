@@ -468,7 +468,7 @@ class ApiService(object):
         if result is None:
             raise NotFound('Template not found')
 
-        if result['svg']:
+        if 'svg' in result and result['svg']:
             result['preview'] = self.exporter.text_to_path(result['svg'])
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
@@ -656,7 +656,9 @@ class ApiService(object):
             raise NotFound('Template not found')
 
         context = template['context']
-        picture_context = template['picture']['context']
+        picture_context = None
+        if template['picture']:
+            picture_context = template['picture']['context']
         if 'picture' in data and 'context' in data['picture']:
             picture_context = data['picture']['context']
 
@@ -690,9 +692,10 @@ class ApiService(object):
             current_query = bson.json_util.loads(self.metadata.get_query(q['id']))
             current_sql = current_query['sql']
             current_id = q['id']
+            current_limit = int(q['limit']) if 'limit' in q and isinstance(q['limit'], int) else 50
             parameters = self._get_query_parameters_and_append_pictures(q, current_query, user_parameters, referential_results, json_only, picture_context, user)
             try:
-                current_results = bson.json_util.loads(self.datareader.select(current_sql, parameters))
+                current_results = bson.json_util.loads(self.datareader.select(current_sql, parameters, limit=current_limit))
             except:
                 raise BadRequest('An error occured while executing query {}'.format(current_id))
             if current_results is None or len(current_results) == 0:
