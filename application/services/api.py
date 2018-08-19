@@ -666,8 +666,33 @@ class ApiService(object):
                 self._append_picture_into_referential_results(row[current_column_id], referential_results, json_only, context,
                     current_ref_config[cfg]['picture']['format'], user)
 
-    def _get_template_data(self):
-        pass
+    def _get_template_data(self, context, picture_context, language, json_only, referential, user_parameters, user):
+        referential_results = dict()
+        if referential is not None:
+            referential_results = self._handle_referential(referential, language, json_only, user)
+
+        query_results = dict()
+        for q in template['queries']:
+            query_results[q['id']] = dict()
+            current_query = bson.json_util.loads(self.metadata.get_query(q['id']))
+            current_sql = current_query['sql']
+            current_id = q['id']
+            current_limit = int(q['limit']) if 'limit' in q and isinstance(q['limit'], int) else 50
+            parameters = self._get_query_parameters_and_append_pictures(q, current_query, user_parameters, referential_results, json_only, picture_context, user)
+            try:
+                current_results = bson.json_util.loads(self.datareader.select(current_sql, parameters, limit=current_limit))
+            except:
+                raise BadRequest('An error occured while executing query {}'.format(current_id))
+            if current_results is None or len(current_results) == 0:
+                raise BadRequest('Query {} returns nothing'.format(current_id))
+            labelized_results = list()
+            for row in current_results:
+                labelized_results.append(self._labelize_row(row, q, language, context, user))
+                if 'referential_results' in q and q['referential_results']:
+                    self._append_referential_results(row, q, referential_results, json_only, picture_context, language, user)
+            query_results[q['id']] = labelized_results
+        results = {'referential': referential_results, 'query': query_results}
+        return results
 
     @cors_http('POST', '/api/v1/query/metadata/template/resolve_with_ids/<string:template_id>',
                allowed_roles=('admin', 'read', 'write'), expected_exceptions=(BadRequest, NotFound))
@@ -706,31 +731,7 @@ class ApiService(object):
         if 'text_to_path' in data and data['text_to_path']:
             text_to_path = True
 
-        referential_results = dict()
-        if referential is not None:
-            referential_results = self._handle_referential(referential, language, json_only, user)
-
-        query_results = dict()
-        for q in template['queries']:
-            query_results[q['id']] = dict()
-            current_query = bson.json_util.loads(self.metadata.get_query(q['id']))
-            current_sql = current_query['sql']
-            current_id = q['id']
-            current_limit = int(q['limit']) if 'limit' in q and isinstance(q['limit'], int) else 50
-            parameters = self._get_query_parameters_and_append_pictures(q, current_query, user_parameters, referential_results, json_only, picture_context, user)
-            try:
-                current_results = bson.json_util.loads(self.datareader.select(current_sql, parameters, limit=current_limit))
-            except:
-                raise BadRequest('An error occured while executing query {}'.format(current_id))
-            if current_results is None or len(current_results) == 0:
-                raise BadRequest('Query {} returns nothing'.format(current_id))
-            labelized_results = list()
-            for row in current_results:
-                labelized_results.append(self._labelize_row(row, q, language, context, user))
-                if 'referential_results' in q and q['referential_results']:
-                    self._append_referential_results(row, q, referential_results, json_only, picture_context, language, user)
-            query_results[q['id']] = labelized_results
-        results = {'referential': referential_results, 'query': query_results}
+        results = self._get_template_data(context, picture_context, language, json_only, referential, user_parameters, user)
         json_results = json.dumps(results, cls=DateEncoder)
 
         if json_only is True:
