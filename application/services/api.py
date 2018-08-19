@@ -666,7 +666,7 @@ class ApiService(object):
                 self._append_picture_into_referential_results(row[current_column_id], referential_results, json_only, context,
                     current_ref_config[cfg]['picture']['format'], user)
 
-    def _get_template_data(self, context, picture_context, language, json_only, referential, user_parameters, user):
+    def _get_template_data(self, template, context, picture_context, language, json_only, referential, user_parameters, user):
         referential_results = dict()
         if referential is not None:
             referential_results = self._handle_referential(referential, language, json_only, user)
@@ -731,7 +731,7 @@ class ApiService(object):
         if 'text_to_path' in data and data['text_to_path']:
             text_to_path = True
 
-        results = self._get_template_data(context, picture_context, language, json_only, referential, user_parameters, user)
+        results = self._get_template_data(template, context, picture_context, language, json_only, referential, user_parameters, user)
         json_results = json.dumps(results, cls=DateEncoder)
 
         if json_only is True:
