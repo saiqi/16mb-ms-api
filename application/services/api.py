@@ -441,6 +441,29 @@ class ApiService(object):
 
         return Response(json.dumps({'id': trigger_id}), mimetype='application/json', status=204)
 
+    @cors_http('GET', '/api/v1/query/metadata/triggers', allowed_roles=('admin',),
+               expected_exceptions=BadRequest)
+    def metatdata_get_all_triggers(self, request):
+        try:
+            result = bson.json_util.loads(self.metadata.get_all_triggers())
+        except:
+            raise BadRequest('An error occurred while retrieving all triggers')
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
+    @cors_http('GET', '/api/v1/query/metadata/trigger/<string:trigger_id>', allowed_roles=('admin',),
+               expected_exceptions=(BadRequest, NotFound))
+    def metadata_get_trigger(self, request, trigger_id):
+        try:
+            result = bson.json_util.loads(self.metadata.get_trigger(trigger_id))
+        except:
+            raise BadRequest('An error occurred while retrieving trigger: {}'.format(trigger_id))
+
+        if result is None:
+            raise NotFound('Trigger not found')
+
+        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
+
     @cors_http('POST', '/api/v1/command/metadata/add_template', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
     def metadata_add_template(self, request):
