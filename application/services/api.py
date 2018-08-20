@@ -771,6 +771,76 @@ class ApiService(object):
 
         return Response(infography, mimetype='image/svg+xml')
 
+    @cors_http('POST', '/api/v1/command/metadata/triggers/refresh', allowed_roles=('admin',), 
+               expected_exceptions=BadRequest)
+    def metadata_refresh_triggers(self, request):
+        user = self._get_user_from_request(request)
+        data = self._handle_request_data(request)
+
+        sub = bson.json_util.loads(self.subscription.get_subscription_by_user(user))
+        if 'export' not in sub['subscription']:
+            raise BadRequest('Export not configured for user {}'.format(user))
+        export_config = sub['subscription']['export']
+
+        if 'type' not in data:
+            raise BadRequest('Type field not in request\'s data')
+        if 'payload' not in data:
+            raise BadRequest('Payload field not in request\'s data')
+        
+        triggers = self.metadata.get_fired_triggers(data['type'])
+        urls = []
+        for t in triggers:
+            res = self.referential.get_event_filtered_by_entities(data['payload'], 
+                t['selector'], user)
+            event = bson.json_util.loads(res)
+            if event:
+                spec = t['template']
+                template = self.metadata.get_template(spec['id'])
+                if not template:
+                    raise BadRequest('Template {} not found'.format(spec['id']))
+                context = template['context']
+                picture_context = None
+                if template['picture']:
+                    picture_context = template['picture']['context']
+                if 'picture' in spec and 'context' in spec['picture']:
+                    picture_context = spec['picture']['context']
+
+                language = template['language']
+                if 'language' in spec:
+                    language = spec['language']
+
+                json_only = False
+                if 'json_only' in spec:
+                    json_only = spec['json_only']
+
+                referential = None
+                if 'referential' in spec:
+                    referential = spec['referential']
+
+                user_parameters = None
+                if 'user_parameters' in spec:
+                    user_parameters = spec['user_parameters']
+
+                text_to_path = False
+                if 'text_to_path' in spec and spec['text_to_path']:
+                    text_to_path = True
+
+                result = self._get_template_data(template, context, picture_context, language, json_only,
+                    referential, user_parameters, user)
+
+                if json_only is True and t['export']['format'] == 'json':
+                    url = self.exporter.upload(json.dumps(result), t['export']['filename'], export_config)
+                else:
+                    try:
+                        infography = self.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
+                    except:
+                        raise BadRequest('Wrong formated template !')
+                    result = self.exporter.text_to_path(infography)
+                    url = self.exporter.export(result, t['export']['filename'], export_config)
+                urls.append(url)
+
+        return Response(json.dumps(urls), mimetype='application/json', status=201)
+
     @cors_http('POST', '/api/v1/command/datastore/create_table', allowed_roles=('admin', 'write',),
                expected_exceptions=BadRequest)
     def datastore_create_table(self, request):
