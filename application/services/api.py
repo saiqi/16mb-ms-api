@@ -787,7 +787,7 @@ class ApiService(object):
         if 'payload' not in data:
             raise BadRequest('Payload field not in request\'s data')
         
-        triggers = self.metadata.get_fired_triggers(data['type'])
+        triggers = bson.json_util.loads(self.metadata.get_fired_triggers(data['type']))
         urls = []
         for t in triggers:
             res = self.referential.get_event_filtered_by_entities(data['payload'], 
