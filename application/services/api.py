@@ -795,7 +795,7 @@ class ApiService(object):
             event = bson.json_util.loads(res)
             if event:
                 spec = t['template']
-                template = self.metadata.get_template(spec['id'])
+                template = bson.json_util.loads(self.metadata.get_template(spec['id']))
                 if not template:
                     raise BadRequest('Template {} not found'.format(spec['id']))
                 context = template['context']
