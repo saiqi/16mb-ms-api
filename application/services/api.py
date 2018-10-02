@@ -771,6 +771,11 @@ class ApiService(object):
 
         return Response(infography, mimetype='image/svg+xml')
 
+    @staticmethod
+    def _handle_trigger_referential_params(referential_params, event_id):
+        event = {'id': event_id, 'event_or_entity': 'event'}
+        return dict((k, v if 'from_event' not in v else event) for k, v in referential_params.items())
+
     @cors_http('POST', '/api/v1/command/metadata/triggers/refresh', allowed_roles=('admin',), 
                expected_exceptions=BadRequest)
     def metadata_refresh_triggers(self, request):
@@ -815,7 +820,7 @@ class ApiService(object):
 
                 referential = None
                 if 'referential' in spec:
-                    referential = spec['referential']
+                    referential = self._handle_trigger_referential_params(spec['referential'], data['payload'])
 
                 user_parameters = None
                 if 'user_parameters' in spec:

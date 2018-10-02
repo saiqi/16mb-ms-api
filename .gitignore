@@ -7,3 +7,5 @@ core.*
 venv/
 .che/
 .cache/
+
+.vscode
