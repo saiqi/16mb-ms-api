@@ -832,9 +832,9 @@ class ApiService(object):
 
                 result = self._get_template_data(template, context, picture_context, language, json_only,
                     referential, user_parameters, user)
-
+                json_results = json.dumps(result, cls=DateEncoder)
                 if json_only is True and t['export']['format'] == 'json':
-                    url = self.exporter.upload(json.dumps(result, cls=DateEncoder), t['export']['filename'], export_config)
+                    url = self.exporter.upload(json_results, t['export']['filename'], export_config)
                 else:
                     try:
                         infography = self.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
