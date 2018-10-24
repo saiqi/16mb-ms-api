@@ -513,7 +513,8 @@ class ApiService(object):
             raise NotFound('Template not found')
 
         if 'svg' in result and result['svg']:
-            result['preview'] = self.exporter.text_to_path(result['svg'])
+            responsive = self.svg_builder.make_responsive(result['svg'])
+            result['preview'] = self.exporter.text_to_path(responsive)
 
         return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
 
