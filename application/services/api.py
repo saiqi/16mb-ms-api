@@ -52,7 +52,12 @@ class CorsHttpRequestHandler(HttpRequestHandler):
         error_dict = serialize(exc)
         payload = {'Error': error_dict['value']}
 
-        return Response(json.dumps(payload), mimetype='application/json', status=status_code)
+        response = Response(json.dumps(payload), mimetype='application/json', status=status_code)
+        response.headers.add("Access-Control-Allow-Credentials", str(self.allow_credentials).lower())
+        response.headers.add("Access-Control-Allow-Methods", ",".join(self.allowed_methods))
+        response.headers.add("Access-Control-Allow-Origin", ",".join(self.allowed_origin))resp = Response(json.dumps(payload), mimetype='application/json', status=status_code)
+
+        return response
 
     @classmethod
     def decorator(cls, *args, **kwargs):
