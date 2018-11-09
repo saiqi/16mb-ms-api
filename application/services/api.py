@@ -556,6 +556,18 @@ class ApiService(object):
 
         return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
 
+    @cors_http('POST', '/api/v1/command/metadata/template/update_html/<string:template_id>',
+               allowed_roles=('admin', 'write',), expected_exceptions=BadRequest)
+    def metadata_update_html_in_template(self, request, template_id):
+        data = self._handle_request_data(request)
+        try:
+            self.metadata.update_html_in_template(template_id, **data)
+        except:
+            raise BadRequest('An error occurred while updating html in template {}'.format(template_id))
+
+        return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
+
+
     @cors_http('POST', '/api/v1/query/metadata/query/resolve/<string:query_id>',
                allowed_roles=('admin', 'write',), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_query(self, request, query_id):
