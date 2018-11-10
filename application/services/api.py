@@ -779,16 +779,28 @@ class ApiService(object):
         if json_only is True:
             return Response(json_results, mimetype='application/json')
 
-        try:
-            infography = self.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
-        except:
-            raise BadRequest('Wrong formated template !')
+        if template['kind'] == 'image':
+            try:
+                infography = self.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
+            except:
+                raise BadRequest('Wrong formated template !')
 
-        if text_to_path is True:
-            result = self.exporter.text_to_path(infography)
-            return Response(result, mimetype='image/svg+xml')
+            if text_to_path is True:
+                result = self.exporter.text_to_path(infography)
+                return Response(result, mimetype='image/svg+xml')
 
-        return Response(infography, mimetype='image/svg+xml')
+            return Response(infography, mimetype='image/svg+xml')
+        else:
+            sub = bson.json_util.loads(self.subscription.get_subscription_by_user(user))
+            if 'export' not in sub['subscription']:
+                raise BadRequest('Export not configured for user {}'.format(user))
+            export_config = sub['subscription']['export']
+            filename = template['datasource']
+            url = self.exporter.upload(json_results, filename, export_config)
+            html = template['html']
+            if '${DATASOURCE}' not in template['html']:
+                raise BadRequest('Missing DATASOURCE variable in HTML template')
+            return Response(html.replace('${DATASOURCE}', url), mimetype='text/html')
 
     @staticmethod
     def _handle_trigger_referential_params(referential_params, event_id):
