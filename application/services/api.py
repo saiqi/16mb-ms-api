@@ -1,5 +1,6 @@
 import json
 import datetime
+import uuid
 from functools import partial
 
 from nameko.exceptions import serialize
@@ -795,7 +796,7 @@ class ApiService(object):
             if 'export' not in sub['subscription']:
                 raise BadRequest('Export not configured for user {}'.format(user))
             export_config = sub['subscription']['export']
-            filename = template['datasource']
+            filename = template['datasource'] if 'datasource' in template else "{}.json".format(str(uuid.uuid4()))
             url = self.exporter.upload(json_results, filename, export_config)
             html = template['html']
             if '${DATASOURCE}' not in template['html']:
