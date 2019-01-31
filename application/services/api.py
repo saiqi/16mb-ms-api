@@ -570,7 +570,7 @@ class ApiService(object):
 
 
     @cors_http('POST', '/api/v1/query/metadata/query/resolve/<string:query_id>',
-               allowed_roles=('admin', 'write',), expected_exceptions=(BadRequest, NotFound))
+               allowed_roles=('admin', 'write','read',), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_query(self, request, query_id):
         data = self._handle_request_data(request)
         query = bson.json_util.loads(self.metadata.get_query(query_id))
