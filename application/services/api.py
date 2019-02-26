@@ -586,9 +586,9 @@ class ApiService(object):
 
         try:
             if params is not None:
-                result = bson.json_util.loads(self.datareader.select(query['sql'], params))
+                result = bson.json_util.loads(self.datareader.select(query['sql'], params, limit=-1))
             else:
-                result = bson.json_util.loads(self.datareader.select(query['sql']))
+                result = bson.json_util.loads(self.datareader.select(query['sql'], limit=-1))
         except:
             raise BadRequest('An error occurred while executing query')
 
