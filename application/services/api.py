@@ -2,6 +2,7 @@ import json
 import datetime
 import uuid
 from functools import partial
+from logging import getLogger
 
 from nameko.exceptions import serialize
 from nameko.web.handlers import HttpRequestHandler
@@ -13,6 +14,7 @@ from werkzeug import Response
 import jwt
 import bson.json_util
 
+_log = getLogger(__name__)
 
 class CorsHttpRequestHandler(HttpRequestHandler):
     def __init__(self, method, url, expected_exceptions=(), **kwargs):
@@ -619,7 +621,6 @@ class ApiService(object):
             return {'first_name': entity['informations']['first_name'], 'last_name': entity['informations']['last_name']}
         return {'first_name': '', 'last_name': ApiService._get_display_name(entity, language)}
 
-
     def _append_picture_into_referential_results(self, entry_key, referential_results, json_only, context, _format, user):
         entry_id = referential_results[entry_key]['id']
         if 'picture' not in referential_results[entry_key]:
@@ -670,6 +671,7 @@ class ApiService(object):
                                     raise BadRequest('Format not in picture configuration for referential parameter {}'.format(p))
                                 _format = ref[p]['picture']['format']
                                 self._append_picture_into_referential_results(ref[p]['name'], referential_results, json_only, context, _format, user)
+        _log.info("{} has been built".format(parameters))
         return parameters
 
     def _labelize_row(self, row, q, language, context, user):
