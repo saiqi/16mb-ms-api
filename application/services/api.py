@@ -129,9 +129,9 @@ class ApiService(object):
     datastore = RpcProxy('datastore')
     referential = RpcProxy('referential')
     svg_builder = RpcProxy('svg_builder')
-    crontask = RpcProxy('crontask')
     subscription = RpcProxy('subscription_manager')
     exporter = RpcProxy('exporter')
+    tmpl = RpcProxy('template')
 
     def _handle_request_data(self, request):
         if not request.get_data():
@@ -570,7 +570,6 @@ class ApiService(object):
 
         return Response(json.dumps({'id': template_id}), mimetype='application/json', status=201)
 
-
     @cors_http('POST', '/api/v1/query/metadata/query/resolve/<string:query_id>',
                allowed_roles=('admin', 'write','read',), expected_exceptions=(BadRequest, NotFound))
     def metadata_resolve_query(self, request, query_id):
@@ -744,19 +743,20 @@ class ApiService(object):
     def metadata_resolve_template_with_ids(self, request, template_id):
         user = self._get_user_from_request(request)
         data = self._handle_request_data(request)
-        template = bson.json_util.loads(self.metadata.get_template(template_id, user))
+        # template = bson.json_util.loads(self.metadata.get_template(template_id, user))
 
-        if template is None:
-            raise NotFound('Template not found')
+        # if template is None:
+        #     raise NotFound('Template not found')
 
-        context = template['context']
+        # context = template['context']
         picture_context = None
-        if template['picture']:
-            picture_context = template['picture']['context']
+        # if template['picture']:
+        #     picture_context = template['picture']['context']
         if 'picture' in data and 'context' in data['picture']:
             picture_context = data['picture']['context']
 
-        language = template['language']
+        # language = template['language']
+        language = None
         if 'language' in data:
             language = data['language']
 
@@ -776,34 +776,39 @@ class ApiService(object):
         if 'text_to_path' in data and data['text_to_path']:
             text_to_path = True
 
-        results = self._get_template_data(template, context, picture_context, language, json_only, referential, user_parameters, user)
-        json_results = json.dumps(results, cls=DateEncoder)
+        result = self.tmpl.resolve(self, template_id, picture_context, language, json_only, 
+        referential, user_parameters, user, text_to_path)
 
-        if json_only is True:
-            return Response(json_results, mimetype='application/json')
+        return Response(result['content'], mimetype=result['mimetype'])
 
-        if template['kind'] == 'image':
-            try:
-                infography = self.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
-            except:
-                raise BadRequest('Wrong formated template !')
+        # results = self._get_template_data(template, context, picture_context, language, json_only, referential, user_parameters, user)
+        # json_results = json.dumps(results, cls=DateEncoder)
 
-            if text_to_path is True:
-                result = self.exporter.text_to_path(infography)
-                return Response(result, mimetype='image/svg+xml')
+        # if json_only is True:
+        #     return Response(json_results, mimetype='application/json')
 
-            return Response(infography, mimetype='image/svg+xml')
-        else:
-            sub = bson.json_util.loads(self.subscription.get_subscription_by_user(user))
-            if 'export' not in sub['subscription']:
-                raise BadRequest('Export not configured for user {}'.format(user))
-            export_config = sub['subscription']['export']
-            filename = template['datasource'] if 'datasource' in template and template['datasource'] else "{}.json".format(str(uuid.uuid4()))
-            url = self.exporter.upload(json_results, filename, export_config)
-            html = template['html']
-            if '${DATASOURCE}' not in template['html']:
-                raise BadRequest('Missing DATASOURCE variable in HTML template')
-            return Response(html.replace('${DATASOURCE}', url), mimetype='text/html')
+        # if template['kind'] == 'image':
+        #     try:
+        #         infography = self.svg_builder.replace_jsonpath(template['svg'], json.loads(json_results))
+        #     except:
+        #         raise BadRequest('Wrong formated template !')
+
+        #     if text_to_path is True:
+        #         result = self.exporter.text_to_path(infography)
+        #         return Response(result, mimetype='image/svg+xml')
+
+        #     return Response(infography, mimetype='image/svg+xml')
+        # else:
+        #     sub = bson.json_util.loads(self.subscription.get_subscription_by_user(user))
+        #     if 'export' not in sub['subscription']:
+        #         raise BadRequest('Export not configured for user {}'.format(user))
+        #     export_config = sub['subscription']['export']
+        #     filename = template['datasource'] if 'datasource' in template and template['datasource'] else "{}.json".format(str(uuid.uuid4()))
+        #     url = self.exporter.upload(json_results, filename, export_config)
+        #     html = template['html']
+        #     if '${DATASOURCE}' not in template['html']:
+        #         raise BadRequest('Missing DATASOURCE variable in HTML template')
+        #     return Response(html.replace('${DATASOURCE}', url), mimetype='text/html')
 
     @staticmethod
     def _handle_trigger_referential_params(referential_params, event_id):
@@ -1135,7 +1140,7 @@ class ApiService(object):
         try:
             entity = bson.json_util.loads(self.referential.get_entity_by_id(entity_id, user))
         except:
-            raise NotFound('Entity {} not found'.format(entry_id))
+            raise NotFound('Entity {} not found'.format(entity_id))
 
         try:
             pic = self.referential.get_entity_picture(entity_id, context, format, user)
