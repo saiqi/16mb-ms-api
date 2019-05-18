@@ -776,7 +776,7 @@ class ApiService(object):
         if 'text_to_path' in data and data['text_to_path']:
             text_to_path = True
 
-        result = self.tmpl.resolve(self, template_id, picture_context, language, json_only, 
+        result = self.tmpl.resolve(template_id, picture_context, language, json_only, 
         referential, user_parameters, user, text_to_path)
 
         return Response(result['content'], mimetype=result['mimetype'])
