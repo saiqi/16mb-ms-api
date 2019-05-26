@@ -908,6 +908,17 @@ class ApiService(object):
 
         return Response(json.dumps({'target_table': data['target_table']}), mimetype='application/json', status=201)
 
+    @cors_http('POST', '/api/v1/command/datastore/create_view', allowed_roles=('admin', 'write',),
+               expected_exceptions=BadRequest)
+    def datastore_create_view(self, request):
+        data = self._handle_request_data(request)
+        try:
+            self.datastore.create_or_replace_view(**data)
+        except:
+            raise BadRequest('An error occured while creating view')
+
+        return Response(json.dumps({'view_name': data['view_name']}), mimetype='application/json', status=201)
+
     @cors_http('GET', '/api/v1/query/datareader/table/<string:table_name>', allowed_roles=('admin', 'write', 'read'), 
                expected_exceptions=BadRequest)
     def datareader_get_table(self, request, table_name):
