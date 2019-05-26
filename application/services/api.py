@@ -8,6 +8,7 @@ from nameko.exceptions import serialize
 from nameko.web.handlers import HttpRequestHandler
 from nameko.rpc import RpcProxy
 from nameko.extensions import register_entrypoint
+from nameko.dependency_providers import DependencyProvider
 from werkzeug.exceptions import BadRequest, Unauthorized, Forbidden, NotFound
 from werkzeug import Response
 
@@ -15,6 +16,15 @@ import jwt
 import bson.json_util
 
 _log = getLogger(__name__)
+
+class ErrorHandler(DependencyProvider):
+
+    def worker_result(self, worker_ctx, res, exc_info):
+        if exc_info is None:
+            return
+
+        exc_type, exc, tb = exc_info
+        _log.error(str(exc))
 
 class CorsHttpRequestHandler(HttpRequestHandler):
     def __init__(self, method, url, expected_exceptions=(), **kwargs):
@@ -122,6 +132,7 @@ class DateEncoder(json.JSONEncoder):
 
 class ApiService(object):
     name = 'api_service'
+    error = ErrorHandler()
 
     opta_collector = RpcProxy('opta_collector')
     metadata = RpcProxy('metadata')
