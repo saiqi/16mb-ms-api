@@ -9,5 +9,6 @@ RUN apk add --no-cache gcc musl-dev ; pip install -r requirements.txt
 ADD application /service/application
 ADD ./cluster.yml /service
 
+EXPOSE 5000
 
 ENTRYPOINT ["nameko","run","--config","cluster.yml"]
