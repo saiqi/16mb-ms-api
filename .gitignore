@@ -5,6 +5,7 @@ __pycache__/
 notebooks/
 core.*
 venv/
+.venv/
 .che/
 .cache/
 

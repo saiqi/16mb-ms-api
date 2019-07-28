@@ -9,6 +9,7 @@ from nameko.web.handlers import HttpRequestHandler
 from nameko.rpc import RpcProxy
 from nameko.extensions import register_entrypoint
 from nameko.dependency_providers import DependencyProvider
+from nameko.events import EventDispatcher
 from werkzeug.exceptions import BadRequest, Unauthorized, Forbidden, NotFound
 from werkzeug import Response
 
@@ -134,7 +135,6 @@ class ApiService(object):
     name = 'api_service'
     error = ErrorHandler()
 
-    opta_collector = RpcProxy('opta_collector')
     metadata = RpcProxy('metadata')
     datareader = RpcProxy('datareader')
     datastore = RpcProxy('datastore')
@@ -143,6 +143,7 @@ class ApiService(object):
     subscription = RpcProxy('subscription_manager')
     exporter = RpcProxy('exporter')
     tmpl = RpcProxy('template')
+    dispatch = EventDispatcher()
 
     def _handle_request_data(self, request):
         if not request.get_data():
@@ -159,158 +160,11 @@ class ApiService(object):
         user = jwt.decode(request.headers.get('Authorization'), verify=False)
         return user['sub']
 
-    @cors_http('POST', '/api/v1/command/opta/add_f1', allowed_roles=('admin',), expected_exceptions=BadRequest)
-    def opta_add_f1(self, request):
+    @cors_http('POST', '/api/v1/command/input/add', allowed_roles=('admin'), expected_exceptions=BadRequest)
+    def input_add(self, request):
         data = self._handle_request_data(request)
-        try:
-            self.opta_collector.add_f1(**data)
-        except:
-            raise BadRequest('An error occurred while adding Opta F1 file')
-
+        self.dispatch('input_config', bson.json_util.dumps(data))
         return Response(json.dumps(data), mimetype='application/json', status=201)
-
-    @cors_http('GET', '/api/v1/query/opta/f1/<string:game_id>', allowed_roles=('admin',), expected_exceptions=BadRequest)
-    def opta_get_f1(self, request, game_id):
-        try:
-            game = self.opta_collector.get_f1(game_id)
-        except:
-            raise BadRequest('An error occured while getting Opta F1 details')
-
-        if game is None:
-            raise NotFound('Opta F1 detail not found')
-
-        result = bson.json_util.loads(game)
-
-        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
-
-    @cors_http('POST', '/api/v1/command/opta/update_all_f1', allowed_roles=('admin',), expected_exceptions=BadRequest)
-    def opta_update_all_f1(self, request):
-        try:
-            self.opta_collector.update_all_f1()
-        except:
-            raise BadRequest('An error occured while updating Opta F1 files')
-        return Response(json.dumps({'status': 'OK'}), mimetype='application/json', status=201)
-
-    @cors_http('GET', '/api/v1/query/opta/f9/<string:game_id>', allowed_roles=('admin',),
-               expected_exceptions=(BadRequest, NotFound))
-    def opta_get_f9(self, request, game_id):
-        try:
-            game = self.opta_collector.get_f9(game_id)
-        except:
-            raise BadRequest('An error occured while getting Opta F9 file')
-
-        if game is None:
-            raise NotFound('Opta F9 file not found')
-
-        result = bson.json_util.loads(game)
-
-        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
-
-    @cors_http('GET', '/api/v1/query/opta/soccer_ids/<string:start>/<string:end>', allowed_roles=('admin',),
-               expected_exceptions=BadRequest)
-    def get_opta_soccer_ids(self, request, start, end):
-        try:
-            result = self.opta_collector.get_soccer_ids_by_dates(start, end)
-        except:
-            raise BadRequest('An error occured while getting Opta soccer game ids')
-
-        return Response(json.dumps(result), mimetype='application/json')
-
-    @cors_http('PUT', '/api/v1/command/opta/ack_f9/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
-    def opta_ack_f9(self, request, game_id):
-        data = self._handle_request_data(request)
-        try:
-            result = self.opta_collector.ack_f9(game_id, data['checksum'])
-        except:
-            raise BadRequest('An error occured while acknowledging Opta F9')
-
-        return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
-
-    @cors_http('PUT', '/api/v1/command/opta/unack_f9/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
-    def opta_unack_f9(self, request, game_id):
-        try:
-            result = self.opta_collector.unack_f9(game_id)
-        except:
-            raise BadRequest('An error occured while unacknowledging Opta F9')
-
-        return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
-
-    @cors_http('POST', '/api/v1/command/opta/add_ru1', allowed_roles=('admin',),
-               expected_exceptions=BadRequest)
-    def opta_add_ru1(self, request):
-        data = self._handle_request_data(request)
-        try:
-            self.opta_collector.add_ru1(**data)
-        except:
-            raise BadRequest('An error occurred while adding Opta RU1 file')
-
-        return Response(json.dumps(data), mimetype='application/json', status=201)
-
-    @cors_http('GET', '/api/v1/query/opta/ru1/<string:game_id>', allowed_roles=('admin',), expected_exceptions=BadRequest)
-    def opta_get_ru1(self, request, game_id):
-        try:
-            game = self.opta_collector.get_ru1(game_id)
-        except:
-            raise BadRequest('An error occured while getting Opta RU1 details')
-
-        if game is None:
-            raise NotFound('Opta RU1 detail not found')
-
-        result = bson.json_util.loads(game)
-
-        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
-
-    @cors_http('POST', '/api/v1/command/opta/update_all_ru1', allowed_roles=('admin',), expected_exceptions=BadRequest)
-    def opta_update_all_ru1(self, request):
-        try:
-            self.opta_collector.update_all_ru1()
-        except:
-            raise BadRequest('An error occured while updating Opta RU1 files')
-        return Response(json.dumps({'status': 'OK'}), mimetype='application/json', status=201)
-
-    @cors_http('GET', '/api/v1/query/opta/ru7/<string:game_id>', allowed_roles=('admin',),
-               expected_exceptions=(BadRequest, NotFound))
-    def opta_get_ru7(self, request, game_id):
-        try:
-            game = self.opta_collector.get_ru7(game_id)
-        except:
-            raise BadRequest('An error occured while getting Opta RU7 file')
-
-        if game is None:
-            raise NotFound('Opta RU7 file not found')
-
-        result = bson.json_util.loads(game)
-
-        return Response(json.dumps(result, cls=DateEncoder), mimetype='application/json')
-
-    @cors_http('GET', '/api/v1/query/opta/rugby_ids/<string:start>/<string:end>', allowed_roles=('admin',),
-               expected_exceptions=BadRequest)
-    def get_opta_rugby_ids(self, request, start, end):
-        try:
-            result = self.opta_collector.get_rugby_ids_by_dates(start, end)
-        except:
-            raise BadRequest('An error occured while getting Opta rugby game ids')
-
-        return Response(json.dumps(result), mimetype='application/json')
-
-    @cors_http('PUT', '/api/v1/command/opta/ack_ru7/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
-    def opta_ack_ru7(self, request, game_id):
-        data = self._handle_request_data(request)
-        try:
-            result = self.opta_collector.ack_ru7(game_id, data['checksum'])
-        except:
-            raise BadRequest('An error occured while acknowledging Opta RU7')
-
-        return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
-
-    @cors_http('PUT', '/api/v1/command/opta/unack_ru7/<string:game_id>', allowed_roles=('admin'), expected_exceptions=BadRequest)
-    def opta_unack_ru7(self, request, game_id):
-        try:
-            result = self.opta_collector.unack_ru7(game_id)
-        except:
-            raise BadRequest('An error occured while unacknowledging Opta RU7')
-
-        return Response(json.dumps({'id': game_id}), mimetype='application/json', status=201)
 
     @cors_http('POST', '/api/v1/command/subscription/add', allowed_roles=('admin'), expected_exceptions=BadRequest)
     def subscription_add(self, request):
