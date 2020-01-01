@@ -1213,3 +1213,11 @@ class ApiService(object):
             raise BadRequest('An error occured while exporting SVG string')
 
         return Response(json.dumps({'url': url}), mimetype='application/json', status=201)
+
+    @cors_http('POST', '/api/v1/command/text_to_path', allowed_roles=('admin', 'write', 'read'), expected_exceptions=BadRequest)
+    def exporter_text_to_path(self, request):
+        data = self._handle_request_data(request)
+        if 'svg' not in data:
+            raise BadRequest('Missing svg in request data')
+        converted = self.exporter.text_to_path(data['svg'])
+        return Response(converted, mimetype='image/svg+xml', status=201)
