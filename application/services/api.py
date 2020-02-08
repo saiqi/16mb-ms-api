@@ -143,6 +143,7 @@ class ApiService(object):
     subscription = RpcProxy('subscription_manager')
     exporter = RpcProxy('exporter')
     tmpl = RpcProxy('template')
+    loader = RpcProxy('loader')
     dispatch = EventDispatcher()
 
     def _handle_request_data(self, request):
@@ -519,6 +520,18 @@ class ApiService(object):
             raise BadRequest('An error occured while creating view')
 
         return Response(json.dumps({'view_name': data['view_name']}), mimetype='application/json', status=201)
+
+    @cors_http('POST', '/api/v1/command/datastore/write', allowed_roles=('admin'),
+               expected_exceptions=BadRequest)
+    def datastore_write(self, request):
+        data = self._handle_request_data(request)
+
+        self.loader.write(
+            data['write_policy'], data['meta'], data['target_table'], data['records'], 
+            data.get('upsert_key', None), data.get('delete_keys', None), data.get('chunk_size', None))
+
+        return Response(json.dumps({'target_table': data['target_table'], 'count': len(data['records'])}),
+                        mimetype='application/json', status=201)
 
     @cors_http('GET', '/api/v1/query/datareader/table/<string:table_name>', allowed_roles=('admin', 'write', 'read'), 
                expected_exceptions=BadRequest)
