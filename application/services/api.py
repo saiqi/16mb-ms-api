@@ -630,24 +630,24 @@ class ApiService(object):
     def referential_add_picture_to_entity(self, request, entity_id):
         data = self._handle_request_data(request)
         try:
-            self.referential.add_picture_to_entity(entity_id, data['context'], data['format'], data['picture_b64'])
+            self.referential.add_picture_to_entity(entity_id, data['context'], data['format'], data['content'], data['kind'])
         except:
             raise BadRequest('An error occured while adding picture to entity')
         return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=201)
 
-    @cors_http('DELETE', '/api/v1/command/referential/delete_picture_from_entity/<string:entity_id>/<string:context>/<string:format>',
+    @cors_http('DELETE', '/api/v1/command/referential/delete_picture_from_entity/<string:entity_id>/<string:context>/<string:format>/<string:kind>',
                allowed_roles=('admin', 'write'), expected_exceptions=BadRequest)
-    def referential_delete_picture_from_entity(self, request, entity_id, context, format):
+    def referential_delete_picture_from_entity(self, request, entity_id, context, format, kind):
         try:
-            self.referential.delete_picture_from_entity(entity_id, context, format)
+            self.referential.delete_picture_from_entity(entity_id, context, format, kind)
         except:
             raise BadRequest('An error occured while deleting picture from entity')
 
         return Response(json.dumps({'id': entity_id}), mimetype='application/json', status=204)
 
-    @cors_http('GET', '/api/v1/query/referential/entity/picture/<string:entity_id>/<string:context>/<string:format>',
+    @cors_http('GET', '/api/v1/query/referential/entity/picture/<string:entity_id>/<string:context>/<string:format>/<string:kind>',
                allowed_roles=('admin', 'write', 'read',), expected_exceptions=NotFound)
-    def referential_get_entity_picture(self, request, entity_id, context, format):
+    def referential_get_entity_picture(self, request, entity_id, context, format, kind):
         user = self._get_user_from_request(request)
         try:
             entity = bson.json_util.loads(self.referential.get_entity_by_id(entity_id, user))
@@ -655,12 +655,15 @@ class ApiService(object):
             raise NotFound('Entity {} not found'.format(entity_id))
 
         try:
-            pic = self.referential.get_entity_picture(entity_id, context, format, user)
+            pic = self.referential.get_entity_picture(entity_id, context, format, user, kind)
         except:
             raise NotFound('Picture ({}/{}) not found for entity {}'.format(context, format, entity_id))
 
         if pic is None:
             raise NotFound('Picture ({}/{}) not found for entity {}'.format(context, format, entity_id))            
+        
+        if kind == 'vectorial':
+            Response(pic, mimetype='image/svg+xml', status=200)
 
         return Response(pic, mimetype='image/png', status=200)
 
