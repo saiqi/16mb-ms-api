@@ -842,12 +842,13 @@ class ApiService(object):
         if not filename.lower().endswith(_format['type'].lower()):
             raise BadRequest('Wrong filename extension {} was expected'.format(_format['type']))
         svg = data['svg']
+        clean_svg = self.svg_builder.clean_for_export(svg)
         args = {k:_format[k] for k in _format if k != 'type'}
         try:
             if _format:
-                url = self.exporter.export(svg, filename, export_config, **args)
+                url = self.exporter.export(clean_svg, filename, export_config, **args)
             else:
-                url = self.exporter.export(svg, filename, export_config)
+                url = self.exporter.export(clean_svg, filename, export_config)
         except:
             raise BadRequest('An error occured while exporting SVG string')
 
