@@ -1,8 +1,8 @@
 import json
 import datetime
-import uuid
 from functools import partial
 from logging import getLogger
+import types
 
 from nameko.exceptions import serialize
 from nameko.web.handlers import HttpRequestHandler
