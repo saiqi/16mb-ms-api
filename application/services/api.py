@@ -842,7 +842,7 @@ class ApiService(object):
         if not filename.lower().endswith(_format['type'].lower()):
             raise BadRequest('Wrong filename extension {} was expected'.format(_format['type']))
         svg = data['svg']
-        clean_svg = self.svg_builder.clean_for_export(svg)
+        clean_svg = self.svg_builder.clean_for_export(svg) if _format['type'] != 'html' else svg
         args = {k:_format[k] for k in _format if k != 'type'}
         try:
             if _format:
